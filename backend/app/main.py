@@ -1,36 +1,34 @@
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent))
+
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-from routers import products
-from routers import inventory
-from routers import production_orders
-from routers import production_logs
-from routers import work_centers
-from routers import quality_checks
-from routers import waste_records
-from routers import downtime
-from routers import suppliers
-from routers import customers
-from routers import purchase_orders
-from routers import sales_orders
-from routers import dashboard
-from routers import ai
-from routers import forecasting
-from routers import oee
-from routers import notifications
-from routers import scheduling
-from routers import maintenance
-from routers import traceability
-from routers import auth
-from routers import users
-from routers import audit_logs
-from routers import companies
-from routers import reports
-from routers import alerts
-from routers import pdf_reports
-from routers import excel_exports
-from routers import subscriptions
-
+from app.routers import (
+    products,
+    inventory,
+    suppliers,
+    customers,
+    production_orders,
+    purchase_orders,
+    sales_orders,
+    quality_checks,
+    waste_records,
+    downtime,
+    maintenance,
+    traceability,
+    dashboard,
+    reports,
+    alerts,
+    ai,
+    forecasting,
+    notifications,
+    oee,
+    pdf_reports,
+    excel_exports,
+    subscriptions,
+)
 app = FastAPI(
     title="SmartFactory AI",
     description="Commercial-grade AI-powered MES and ERP platform for manufacturing companies",
