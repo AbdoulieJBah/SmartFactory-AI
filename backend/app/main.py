@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parent))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import (
+from routers import (
     auth,
     users,
     audit_logs,
