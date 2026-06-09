@@ -5,6 +5,10 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from models import Base
+from database import engine
+
+Base.metadata.create_all(bind=engine)
 
 from routers import (
     auth,
