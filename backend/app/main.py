@@ -4,15 +4,22 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import (
+    auth,
+    users,
+    audit_logs,
+    companies,
     products,
     inventory,
     suppliers,
     customers,
     production_orders,
+    production_logs,
     purchase_orders,
     sales_orders,
+    work_centers,
     quality_checks,
     waste_records,
     downtime,
@@ -24,6 +31,7 @@ from app.routers import (
     ai,
     forecasting,
     notifications,
+    scheduling,
     oee,
     pdf_reports,
     excel_exports,
