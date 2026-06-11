@@ -5,8 +5,9 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from models import Base
+
 from database import engine
+from models import Base
 
 Base.metadata.create_all(bind=engine)
 
@@ -41,6 +42,7 @@ from routers import (
     excel_exports,
     subscriptions,
 )
+
 app = FastAPI(
     title="SmartFactory AI",
     description="Commercial-grade AI-powered MES and ERP platform for manufacturing companies",
@@ -52,6 +54,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://smart-factory-ai-seven.vercel.app",
+        "https://smart-factory-ai-git-main-abdouliejbahs-projects.vercel.app",
+        "https://smart-factory-7esait8ce-abdouliejbahs-projects.vercel.app",
+        "https://smart-factory-ai-kappa.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -88,9 +94,7 @@ app.include_router(reports.router)
 app.include_router(alerts.router)
 app.include_router(pdf_reports.router)
 app.include_router(excel_exports.router)
-app.include_router(
-    subscriptions.router
-)
+app.include_router(subscriptions.router)
 
 
 @app.get("/")
@@ -125,5 +129,8 @@ def root():
             "Traceability",
             "Reports",
             "Alerts",
+            "PDF Reports",
+            "Excel Exports",
+            "Subscriptions",
         ],
     }
