@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -308,3 +308,23 @@ class BatchTrace(Base):
     company = relationship("Company")
     product = relationship("Product")
     supplier = relationship("Supplier")
+
+
+class ProductionSchedule(Base):
+    __tablename__ = "production_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=True)
+    work_center_id = Column(Integer, ForeignKey("work_centers.id"), nullable=True)
+
+    schedule_date = Column(Date, nullable=False)
+    shift = Column(String, default="Morning")
+    start_time = Column(String, nullable=False)
+    end_time = Column(String, nullable=False)
+
+    priority = Column(String, default="Normal")
+    status = Column(String, default="Planned")
+    capacity_load = Column(Float, default=0)
+
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

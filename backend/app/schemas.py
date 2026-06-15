@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr
 
@@ -264,6 +265,44 @@ class BatchTraceCreate(BaseModel):
 
 class BatchTraceResponse(BatchTraceCreate):
     id: int
+
+    class Config:
+        from_attributes = True
+
+
+class ProductionScheduleBase(BaseModel):
+    order_id: Optional[int] = None
+    work_center_id: Optional[int] = None
+    schedule_date: date
+    shift: str = "Morning"
+    start_time: str
+    end_time: str
+    priority: str = "Normal"
+    status: str = "Planned"
+    capacity_load: float = 0
+    notes: Optional[str] = None
+
+
+class ProductionScheduleCreate(ProductionScheduleBase):
+    pass
+
+
+class ProductionScheduleUpdate(BaseModel):
+    order_id: Optional[int] = None
+    work_center_id: Optional[int] = None
+    schedule_date: Optional[date] = None
+    shift: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    capacity_load: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class ProductionScheduleResponse(ProductionScheduleBase):
+    id: int
+    created_at: datetime
 
     class Config:
         from_attributes = True
