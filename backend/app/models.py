@@ -326,5 +326,13 @@ class ProductionSchedule(Base):
     status = Column(String, default="Planned")
     capacity_load = Column(Float, default=0)
 
+    assigned_operator = Column(String, nullable=True)
+    material_status = Column(String, default="Unchecked")
+    conflict_status = Column(String, default="Clear")
+    schedule_type = Column(String, default="Manual")
+
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    order = relationship("ProductionOrder")
+    work_center = relationship("WorkCenter")

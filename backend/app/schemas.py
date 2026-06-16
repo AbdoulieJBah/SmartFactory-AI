@@ -280,6 +280,10 @@ class ProductionScheduleBase(BaseModel):
     priority: str = "Normal"
     status: str = "Planned"
     capacity_load: float = 0
+    assigned_operator: Optional[str] = None
+    material_status: str = "Unchecked"
+    conflict_status: str = "Clear"
+    schedule_type: str = "Manual"
     notes: Optional[str] = None
 
 
@@ -297,6 +301,10 @@ class ProductionScheduleUpdate(BaseModel):
     priority: Optional[str] = None
     status: Optional[str] = None
     capacity_load: Optional[float] = None
+    assigned_operator: Optional[str] = None
+    material_status: Optional[str] = None
+    conflict_status: Optional[str] = None
+    schedule_type: Optional[str] = None
     notes: Optional[str] = None
 
 
