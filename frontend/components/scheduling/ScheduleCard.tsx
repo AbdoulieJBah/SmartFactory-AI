@@ -88,7 +88,7 @@ export default function ScheduleCard({
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <span
           className={`rounded-full px-2 py-1 font-semibold ${materialClass(
-            item.material_status
+            item.material_status || undefined
           )}`}
         >
           Material: {item.material_status || "Unchecked"}
@@ -96,7 +96,7 @@ export default function ScheduleCard({
 
         <span
           className={`rounded-full px-2 py-1 font-semibold ${conflictClass(
-            item.conflict_status
+            item.conflict_status || undefined
           )}`}
         >
           {item.conflict_status || "Clear"}

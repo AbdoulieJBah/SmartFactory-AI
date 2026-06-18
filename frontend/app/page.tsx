@@ -352,9 +352,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f8fb]">
-      <div className="fixed left-0 top-0 z-40 h-screen w-72">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
       <main className="ml-72 min-h-screen p-5">
         <div className="mb-5 flex items-start justify-between">

@@ -1,5 +1,10 @@
-import { CapacityItem } from "./types";
-import { riskClass } from "./helpers";
+interface CapacityItem {
+  work_center_id: number;
+  work_center_name: string;
+  average_capacity_load: number;
+  scheduled_orders: number;
+  risk: string;
+}
 
 export default function CapacityPlanning({
   capacity,
@@ -8,54 +13,42 @@ export default function CapacityPlanning({
 }) {
   return (
     <div className="rounded-xl border bg-white p-5 shadow-sm">
-      <h2 className="mb-4 text-lg font-bold">Capacity Planning</h2>
+      <h2 className="mb-4 text-lg font-bold">
+        Capacity Planning
+      </h2>
 
-      {capacity.length === 0 ? (
-        <p className="text-sm text-gray-500">No capacity data found.</p>
-      ) : (
-        <div className="space-y-4">
-          {capacity.map((item) => (
-            <div key={item.work_center_id} className="rounded-xl border p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">{item.work_center_name}</p>
-                  <p className="text-sm text-gray-500">
-                    {item.status} · {item.scheduled_orders} scheduled orders
-                  </p>
-                </div>
+      <div className="space-y-4">
+        {capacity.map((item) => (
+          <div key={item.work_center_id}>
+            <div className="mb-2 flex justify-between">
+              <span className="font-medium">
+                {item.work_center_name}
+              </span>
 
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${riskClass(
-                    item.risk
-                  )}`}
-                >
-                  {item.risk}
-                </span>
-              </div>
-
-              <div className="mb-1 flex justify-between text-sm">
-                <span>Average Capacity Load</span>
-                <strong>{item.average_capacity_load}%</strong>
-              </div>
-
-              <div className="h-2 rounded-full bg-gray-100">
-                <div
-                  className={`h-2 rounded-full ${
-                    item.average_capacity_load >= 90
-                      ? "bg-red-600"
-                      : item.average_capacity_load >= 75
-                      ? "bg-orange-500"
-                      : "bg-blue-600"
-                  }`}
-                  style={{
-                    width: `${Math.min(100, item.average_capacity_load)}%`,
-                  }}
-                />
-              </div>
+              <span>{item.average_capacity_load}%</span>
             </div>
-          ))}
-        </div>
-      )}
+
+            <div className="h-3 rounded-full bg-gray-100">
+              <div
+                className={`h-3 rounded-full ${
+                  item.average_capacity_load >= 90
+                    ? "bg-red-600"
+                    : item.average_capacity_load >= 75
+                    ? "bg-orange-500"
+                    : "bg-blue-600"
+                }`}
+                style={{
+                  width: `${item.average_capacity_load}%`,
+                }}
+              />
+            </div>
+
+            <p className="mt-1 text-xs text-gray-500">
+              {item.scheduled_orders} scheduled orders
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

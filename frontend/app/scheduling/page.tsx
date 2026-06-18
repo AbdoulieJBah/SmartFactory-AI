@@ -108,7 +108,12 @@ export default function SchedulingPage() {
       setSuccess("");
 
       const res = await api.post("/scheduling/auto-generate");
-      setSuccess(res.data.message || "Optimized schedule generated.");
+      setSuccess(
+        `${res.data.message || "Optimized schedule generated."} Created: ${
+          res.data.created ?? 0
+        }, Skipped: ${res.data.skipped ?? 0}`
+      );
+
       await loadData();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -183,33 +188,38 @@ export default function SchedulingPage() {
   const avgCapacity =
     schedules.length > 0
       ? Math.round(
-          schedules.reduce((sum, item) => sum + Number(item.capacity_load || 0), 0) /
-            schedules.length
+          schedules.reduce(
+            (sum, item) => sum + Number(item.capacity_load || 0),
+            0
+          ) / schedules.length
         )
       : 0;
 
-  const urgentOrders = schedules.filter((item) => item.priority === "Urgent").length;
-  const highRiskCenters = capacity.filter((item) => item.risk === "High").length;
+  const urgentOrders = schedules.filter(
+    (item) => item.priority === "Urgent"
+  ).length;
+
+  const highRiskCenters = capacity.filter(
+    (item) => item.risk === "High"
+  ).length;
 
   return (
     <div className="min-h-screen bg-[#f6f8fb]">
-      <div className="fixed left-0 top-0 z-40 h-screen w-72">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
       <main className="ml-72 min-h-screen p-6">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold text-blue-700">SmartFactory AI</p>
+        <div className="mb-6">
+          <p className="text-sm font-semibold text-blue-700">
+            SmartFactory AI
+          </p>
 
-            <h1 className="mt-1 text-3xl font-bold text-gray-950">
-              Production Scheduling Board
-            </h1>
+          <h1 className="mt-1 text-3xl font-bold text-gray-950">
+            Enterprise Production Scheduling
+          </h1>
 
-            <p className="mt-1 text-sm text-gray-500">
-              Enterprise scheduling with Gantt planning, auto optimization, reallocation, capacity, conflicts, materials, and operators.
-            </p>
-          </div>
+          <p className="mt-1 text-sm text-gray-500">
+            Gantt planning, auto optimization, machine reallocation, capacity planning, material checks, conflict detection, operators, and workflow control.
+          </p>
         </div>
 
         {error && (
