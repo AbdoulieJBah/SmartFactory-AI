@@ -99,8 +99,8 @@ def seed_demo_data():
 
     # Production Orders
     production_orders = [
-        ProductionOrder(order_number="PO-2026-001", product_id=products_db[0].id, work_center_id=work_centers_db[0].id, target_quantity=1000, produced_quantity=650, priority="High", status="In Progress"),
-        ProductionOrder(order_number="PO-2026-002", product_id=products_db[1].id, work_center_id=work_centers_db[1].id, target_quantity=600, produced_quantity=0, priority="Normal", status="Planned"),
+        ProductionOrder(order_number="PO-2026-001", product_id=products_db[0].id, work_center_id=work_centers_db[0].id, target_quantity=1000, produced_quantity=920, priority="High", status="In Progress"),
+        ProductionOrder(order_number="PO-2026-002", product_id=products_db[1].id, work_center_id=work_centers_db[1].id, target_quantity=600, produced_quantity=420, priority="Normal", status="In Progress"),
         ProductionOrder(order_number="PO-2026-003", product_id=products_db[0].id, work_center_id=work_centers_db[2].id, target_quantity=1200, produced_quantity=1200, priority="Normal", status="Completed"),
     ]
 
@@ -114,9 +114,13 @@ def seed_demo_data():
 
     # Quality Checks
     quality_checks = [
-        QualityCheck(production_order_id=orders_db[0].id, check_type="Visual Inspection", result="Pass", inspector_name="Quality Team A", defects_count=2, notes="Minor defects detected"),
-        QualityCheck(production_order_id=orders_db[1].id, check_type="Weight Check", result="Warning", inspector_name="Quality Team B", defects_count=5, corrective_action="Adjust filling machine"),
-        QualityCheck(production_order_id=orders_db[2].id, check_type="Final Inspection", result="Fail", inspector_name="Quality Team A", defects_count=12, corrective_action="Review packaging seal"),
+        QualityCheck(production_order_id=orders_db[0].id, check_type="Visual Inspection", result="Pass", inspector_name="Quality Team A", defects_count=1, notes="Minor cosmetic defect observed"),
+        QualityCheck(production_order_id=orders_db[0].id, check_type="Weight Check", result="Pass", inspector_name="Quality Team B", defects_count=0),
+        QualityCheck(production_order_id=orders_db[0].id, check_type="Seal Integrity", result="Pass", inspector_name="Quality Team A", defects_count=0),
+        QualityCheck(production_order_id=orders_db[1].id, check_type="Weight Check", result="Warning", inspector_name="Quality Team B", defects_count=3, corrective_action="Adjust filling machine"),
+        QualityCheck(production_order_id=orders_db[1].id, check_type="Label Check", result="Pass", inspector_name="Quality Team C", defects_count=0),
+        QualityCheck(production_order_id=orders_db[2].id, check_type="Final Inspection", result="Pass", inspector_name="Quality Team A", defects_count=0),
+        QualityCheck(production_order_id=orders_db[2].id, check_type="Temperature Check", result="Fail", inspector_name="Quality Team C", defects_count=4, corrective_action="Review cold-chain handoff"),
     ]
 
     for check in quality_checks:
@@ -134,9 +138,9 @@ def seed_demo_data():
 
     # Downtime
     downtime_records = [
-        DowntimeRecord(work_center_id=work_centers_db[0].id, reason="Machine cleaning", duration_minutes=35, recorded_by="Technician A"),
-        DowntimeRecord(work_center_id=work_centers_db[1].id, reason="Material delay", duration_minutes=75, recorded_by="Supervisor B"),
-        DowntimeRecord(work_center_id=work_centers_db[3].id, reason="Maintenance", duration_minutes=120, recorded_by="Technician C"),
+        DowntimeRecord(work_center_id=work_centers_db[0].id, reason="Machine cleaning", duration_minutes=15, recorded_by="Technician A"),
+        DowntimeRecord(work_center_id=work_centers_db[1].id, reason="Material delay", duration_minutes=20, recorded_by="Supervisor B"),
+        DowntimeRecord(work_center_id=work_centers_db[3].id, reason="Maintenance", duration_minutes=10, recorded_by="Technician C"),
     ]
 
     for downtime in downtime_records:

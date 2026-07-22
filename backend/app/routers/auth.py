@@ -18,7 +18,6 @@ class RegisterRequest(BaseModel):
     full_name: str
     email: EmailStr
     password: str
-    role: str = "Operator"
 
 
 class LoginRequest(BaseModel):
@@ -45,7 +44,7 @@ def register_user(
         full_name=request.full_name,
         email=request.email,
         password_hash=hash_password(request.password),
-        role=request.role
+        role="Operator"
     )
 
     db.add(new_user)

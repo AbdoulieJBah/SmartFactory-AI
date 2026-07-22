@@ -65,7 +65,10 @@ def create_production_order(
     if existing_order:
         raise HTTPException(status_code=400, detail="Production order number already exists")
 
-    new_order = ProductionOrder(**order.dict(), company_id=company.id)
+    order_data = order.dict()
+    order_data["produced_quantity"] = 0
+
+    new_order = ProductionOrder(**order_data, company_id=company.id)
 
     db.add(new_order)
     db.flush()
@@ -140,6 +143,9 @@ def update_production_order(
         raise HTTPException(status_code=404, detail="Production order not found")
 
     for key, value in order_update.dict().items():
+        if key == "produced_quantity":
+            continue
+
         setattr(order, key, value)
 
     write_audit_log(

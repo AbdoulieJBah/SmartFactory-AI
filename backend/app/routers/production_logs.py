@@ -2,11 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_company, require_production_access, require_read_access
+from dependencies import (
+    get_current_company,
+    get_current_user,
+    require_production_access,
+    require_read_access,
+)
 from models import AuditLog, Company, ProductionLog, ProductionOrder, User
 from schemas import ProductionLogCreate, ProductionLogResponse
 
-router = APIRouter(prefix="/production-logs", tags=["Production Logs"])
+router = APIRouter(
+    prefix="/production-logs",
+    tags=["Production Logs"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def write_audit_log(db: Session, user: User, action: str, description: str):

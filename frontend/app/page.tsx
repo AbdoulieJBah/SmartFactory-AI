@@ -70,6 +70,14 @@ const formatCurrency = (value: number) =>
 
 const formatPercent = (value: number) => `${Number(value || 0).toFixed(1)}%`;
 
+const renderPercentLabel = ({
+  name,
+  value,
+}: {
+  name?: string;
+  value?: number;
+}) => `${name}: ${Number(value || 0).toFixed(1)}%`;
+
 const safeArray = (value: unknown): AnyRecord[] => {
   if (Array.isArray(value)) return value;
   const collection = value && typeof value === "object" ? (value as ApiCollection) : {};
@@ -371,7 +379,7 @@ export default function DashboardPage() {
               Executive MES & ERP Dashboard
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Power BI-style command center for production, OEE, inventory, quality, and finance.
+              Operations command center for production, OEE, inventory, quality, and finance.
             </p>
           </div>
 
@@ -420,7 +428,7 @@ export default function DashboardPage() {
               <KpiCard title="Products" value={kpis.total_products} subtitle="Active product catalog" icon={<Package size={19} />} tone="blue" href="/products" />
               <KpiCard title="Inventory Value" value={formatCurrency(kpis.inventory_value)} subtitle="Estimated stock value" icon={<Wallet size={19} />} tone="purple" href="/inventory" />
               <KpiCard title="Open Orders" value={kpis.open_production_orders} subtitle="Production not completed" icon={<Factory size={19} />} tone="orange" href="/production-orders" />
-              <KpiCard title="OEE Score" value={formatPercent(oee.score)} subtitle="Availability × performance × quality" icon={<Gauge size={19} />} tone={oee.score >= 85 ? "green" : "orange"} href="/oee" />
+              <KpiCard title="OEE Score" value={formatPercent(oee.score)} subtitle="Availability x performance x quality" icon={<Gauge size={19} />} tone={oee.score >= 85 ? "green" : "orange"} href="/oee" />
 
               <KpiCard title="Efficiency" value={formatPercent(kpis.production_efficiency)} subtitle="Produced vs target quantity" icon={<TrendingUp size={19} />} tone="green" href="/production-orders" />
               <KpiCard title="Quality Pass Rate" value={formatPercent(kpis.quality_pass_rate)} subtitle="Passed inspections" icon={<ClipboardCheck size={19} />} tone="green" href="/quality" />
@@ -454,7 +462,7 @@ export default function DashboardPage() {
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={qualityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label>
+                      <Pie data={qualityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={renderPercentLabel}>
                         <Cell fill="#16a34a" />
                         <Cell fill="#dc2626" />
                       </Pie>
@@ -480,7 +488,7 @@ export default function DashboardPage() {
             </section>
 
             <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <SectionCard title="Production Trend" subtitle={`Filtered view: ${dateFilter}`}>
+              <SectionCard title="Production Order Progress" subtitle={`Filtered view: ${dateFilter}`}>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendData}>
@@ -530,10 +538,10 @@ export default function DashboardPage() {
                           <div className="mb-2 flex items-center justify-between">
                             <div>
                               <p className="font-semibold text-gray-950">
-                                {getValue(order, ["order_number", "orderNumber", "id"])} · {getOrderProductName(order)}
+                                {getValue(order, ["order_number", "orderNumber", "id"])} - {getOrderProductName(order)}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {produced} / {target} units · {progress.toFixed(0)}%
+                                {produced} / {target} units - {progress.toFixed(0)}%
                               </p>
                             </div>
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusTone(status)}`}>
@@ -625,19 +633,19 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-xl border p-3">
                     <p className="text-sm font-semibold text-gray-950">Washing Line A</p>
-                    <p className="text-xs text-gray-500">Running · salad washing process</p>
+                    <p className="text-xs text-gray-500">Running - salad washing process</p>
                   </div>
                   <div className="rounded-xl border p-3">
                     <p className="text-sm font-semibold text-gray-950">Packaging Line A</p>
-                    <p className="text-xs text-gray-500">In progress · fresh salad packs</p>
+                    <p className="text-xs text-gray-500">In progress - fresh salad packs</p>
                   </div>
                   <div className="rounded-xl border p-3">
                     <p className="text-sm font-semibold text-gray-950">Fresh Salad Mix</p>
-                    <p className="text-xs text-gray-500">Finished product · ready for shipment</p>
+                    <p className="text-xs text-gray-500">Finished product - ready for shipment</p>
                   </div>
                   <div className="rounded-xl border p-3">
                     <p className="text-sm font-semibold text-gray-950">GreenFarm SRL</p>
-                    <p className="text-xs text-gray-500">Supplier · leafy vegetables</p>
+                    <p className="text-xs text-gray-500">Supplier - leafy vegetables</p>
                   </div>
                 </div>
               </SectionCard>

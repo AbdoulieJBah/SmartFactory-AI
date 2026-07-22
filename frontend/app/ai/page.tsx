@@ -125,7 +125,7 @@ export default function AICopilotPage() {
         await Promise.allSettled([
           api.get("/inventory/"),
           api.get("/production-orders/"),
-          api.get("/quality/"),
+          api.get("/quality-checks/"),
           api.get("/downtime/"),
         ]);
 
@@ -358,8 +358,8 @@ export default function AICopilotPage() {
                 Factory Intelligence Chat
               </h2>
               <p className="text-sm text-gray-500">
-                Ask questions like: “Which orders are behind schedule?” or “Why
-                is OEE dropping?”
+                Ask questions like: &quot;Which orders are behind schedule?&quot; or &quot;Why
+                is OEE dropping?&quot;
               </p>
             </div>
 
@@ -490,9 +490,9 @@ export default function AICopilotPage() {
               </h3>
 
               <p className="mt-2 text-sm text-blue-700">
-                “Generate an executive summary for today’s production,
+                &quot;Generate an executive summary for today&apos;s production,
                 inventory risks, OEE, downtime, and quality performance. Include
-                actions for the plant manager.”
+                actions for the plant manager.&quot;
               </p>
             </div>
           </aside>

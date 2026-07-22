@@ -8,10 +8,19 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_company, require_production_access, require_read_access
+from dependencies import (
+    get_current_company,
+    get_current_user,
+    require_production_access,
+    require_read_access,
+)
 from models import Company, Inventory, ProductionOrder, ProductionSchedule, WorkCenter
 
-router = APIRouter(prefix="/scheduling", tags=["Scheduling"])
+router = APIRouter(
+    prefix="/scheduling",
+    tags=["Scheduling"],
+    dependencies=[Depends(get_current_user)],
+)
 
 PRIORITY_SCORE = {
     "Urgent": 4,
