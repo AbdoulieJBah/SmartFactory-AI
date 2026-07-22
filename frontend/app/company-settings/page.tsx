@@ -65,7 +65,7 @@ export default function CompanySettingsPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="ml-72 min-h-screen flex-1 p-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Company Settings</h1>
           <p className="text-gray-500 mt-1">

@@ -1,4 +1,4 @@
-import { AnyRecord } from "./types";
+import { AnyRecord, ScheduleFormState } from "./types";
 import { getValue } from "./helpers";
 
 export default function SchedulingForm({
@@ -8,8 +8,8 @@ export default function SchedulingForm({
   workCenters,
   onSubmit,
 }: {
-  form: any;
-  setForm: (value: any) => void;
+  form: ScheduleFormState;
+  setForm: (value: ScheduleFormState) => void;
   orders: AnyRecord[];
   workCenters: AnyRecord[];
   onSubmit: () => void;

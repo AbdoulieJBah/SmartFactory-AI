@@ -64,7 +64,7 @@ export default function OrdersPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="ml-72 min-h-screen flex-1 p-8">
         <h1 className="text-3xl font-bold mb-6">Production Orders</h1>
 
         <div className="bg-white p-6 rounded-xl shadow mb-6">

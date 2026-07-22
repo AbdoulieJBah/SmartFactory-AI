@@ -11,7 +11,6 @@ import {
   Gauge,
   RefreshCw,
   Timer,
-  TrendingDown,
   TrendingUp,
   Wrench,
 } from "lucide-react";

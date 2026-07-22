@@ -45,7 +45,7 @@ export default function SchedulingPage() {
         ]);
 
       if (scheduleRes.status === "fulfilled") {
-        setSchedules(safeArray(scheduleRes.value.data) as ScheduleItem[]);
+        setSchedules(safeArray(scheduleRes.value.data) as unknown as ScheduleItem[]);
       }
 
       if (ordersRes.status === "fulfilled") {
@@ -57,7 +57,7 @@ export default function SchedulingPage() {
       }
 
       if (capacityRes.status === "fulfilled") {
-        setCapacity(safeArray(capacityRes.value.data) as CapacityItem[]);
+        setCapacity(safeArray(capacityRes.value.data) as unknown as CapacityItem[]);
       }
 
       if (scheduleRes.status === "rejected") {

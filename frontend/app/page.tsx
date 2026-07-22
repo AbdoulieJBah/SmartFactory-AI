@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { api, getErrorMessage } from "./lib/api";
 import {
   AlertTriangle,
-  Boxes,
   Factory,
   Package,
   ShoppingCart,
-  Truck,
-  Users,
   Wallet,
   TrendingUp,
   ClipboardCheck,
@@ -57,7 +54,12 @@ interface DashboardResponse {
 }
 
 type DateFilter = "Today" | "Week" | "Month" | "All";
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
+type ApiCollection = {
+  data?: unknown;
+  items?: unknown;
+  results?: unknown;
+};
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("en-IE", {
@@ -68,11 +70,12 @@ const formatCurrency = (value: number) =>
 
 const formatPercent = (value: number) => `${Number(value || 0).toFixed(1)}%`;
 
-const safeArray = (value: any): AnyRecord[] => {
+const safeArray = (value: unknown): AnyRecord[] => {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.items)) return value.items;
-  if (Array.isArray(value?.results)) return value.results;
+  const collection = value && typeof value === "object" ? (value as ApiCollection) : {};
+  if (Array.isArray(collection.data)) return collection.data as AnyRecord[];
+  if (Array.isArray(collection.items)) return collection.items as AnyRecord[];
+  if (Array.isArray(collection.results)) return collection.results as AnyRecord[];
   return [];
 };
 
@@ -80,10 +83,14 @@ function getValue(
   obj: AnyRecord,
   keys: string[],
   fallback: string | number = "-"
-) {
+): string | number {
   for (const key of keys) {
-    if (obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "") {
-      return obj[key];
+    const value = obj?.[key];
+
+    if (value !== undefined && value !== null && value !== "") {
+      return typeof value === "number" || typeof value === "string"
+        ? value
+        : String(value);
     }
   }
   return fallback;
@@ -197,9 +204,9 @@ export default function DashboardPage() {
         api.get("/products/"),
         api.get("/inventory/"),
         api.get("/production-orders/"),
-        api.get("/quality/"),
+        api.get("/quality-checks/"),
         api.get("/downtime/"),
-        api.get("/waste/"),
+        api.get("/waste-records/"),
       ]);
 
       if (dashboardRes.status === "fulfilled") setData(dashboardRes.value.data);
@@ -226,7 +233,7 @@ export default function DashboardPage() {
 
   const kpis = data?.kpis;
 
-  const getProductName = (productId: string | number) => {
+  const getProductName = useCallback((productId: string | number) => {
     const product = products.find(
       (p) => String(getValue(p, ["id"], "")) === String(productId)
     );
@@ -238,15 +245,15 @@ export default function DashboardPage() {
         `Product ${productId}`
       )
     );
-  };
+  }, [products]);
 
-  const getOrderProductName = (order: AnyRecord) => {
+  const getOrderProductName = useCallback((order: AnyRecord) => {
     const directName = getValue(order, ["product_name", "productName"], "");
     if (directName) return String(directName);
 
     const productId = getValue(order, ["product_id", "productId", "product"], "");
     return getProductName(productId);
-  };
+  }, [getProductName]);
 
   const recentOrders = useMemo(() => orders.slice(0, 5), [orders]);
 
@@ -348,7 +355,7 @@ export default function DashboardPage() {
     ];
 
     return activities.slice(0, 6);
-  }, [orders, quality, downtime, waste, products]);
+  }, [orders, quality, downtime, waste, getOrderProductName]);
 
   return (
     <div className="min-h-screen bg-[#f6f8fb]">

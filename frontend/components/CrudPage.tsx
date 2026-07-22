@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../app/lib/api";
 import Sidebar from "./Sidebar";
 
@@ -31,7 +31,7 @@ interface CrudPageProps {
   }[];
 }
 
-type RowData = Record<string, any>;
+type RowData = Record<string, unknown>;
 
 export default function CrudPage({
   title,
@@ -48,34 +48,34 @@ export default function CrudPage({
   }, [fields]);
 
   const [rows, setRows] = useState<RowData[]>([]);
-  const [lookupData, setLookupData] = useState<Record<string, any[]>>({});
+  const [lookupData, setLookupData] = useState<Record<string, RowData[]>>({});
   const [form, setForm] = useState<Record<string, string>>(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchRows = async () => {
+  const fetchRows = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
       const res = await api.get(endpoint);
-      setRows(res.data);
+      setRows(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  };
+  }, [endpoint]);
 
-  const fetchLookups = async () => {
-    const data: Record<string, any[]> = {};
+  const fetchLookups = useCallback(async () => {
+    const data: Record<string, RowData[]> = {};
 
     for (const field of fields) {
       if (field.apiEndpoint) {
         try {
           const response = await api.get(field.apiEndpoint);
-          data[field.name] = response.data;
+          data[field.name] = Array.isArray(response.data) ? response.data : [];
         } catch {
           data[field.name] = [];
         }
@@ -83,7 +83,7 @@ export default function CrudPage({
     }
 
     setLookupData(data);
-  };
+  }, [fields]);
 
   useEffect(() => {
     setForm(initialForm);
@@ -92,7 +92,7 @@ export default function CrudPage({
   useEffect(() => {
     fetchRows();
     fetchLookups();
-  }, []);
+  }, [fetchLookups, fetchRows]);
 
   const buildPayload = () => {
     const payload: RowData = {};
@@ -157,7 +157,7 @@ export default function CrudPage({
     });
 
     setForm(nextForm);
-    setEditingId(row.id);
+    setEditingId(Number(row.id));
   };
 
   const deleteRow = async (id: number) => {
@@ -177,7 +177,7 @@ export default function CrudPage({
     setEditingId(null);
   };
 
-  const getLookupLabel = (fieldName: string, value: any) => {
+  const getLookupLabel = (fieldName: string, value: unknown) => {
     const field = fields.find((item) => item.name === fieldName);
 
     if (!field?.apiEndpoint) return value ?? "-";
@@ -250,7 +250,7 @@ export default function CrudPage({
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-8 overflow-x-auto">
+      <main className="ml-72 min-h-screen flex-1 overflow-x-auto p-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">{title}</h1>
           <p className="text-gray-500 mt-1">{subtitle}</p>
@@ -294,9 +294,12 @@ export default function CrudPage({
                       const valueKey = field.valueField || "id";
                       const labelKey = field.labelField || "name";
 
+                      const optionValue = String(item[valueKey] ?? "");
+                      const optionLabel = String(item[labelKey] ?? optionValue);
+
                       return (
-                        <option key={item[valueKey]} value={item[valueKey]}>
-                          {item[labelKey]}
+                        <option key={optionValue} value={optionValue}>
+                          {optionLabel}
                         </option>
                       );
                     })}
@@ -378,8 +381,11 @@ export default function CrudPage({
               </thead>
 
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} className="border-b hover:bg-gray-50">
+                {rows.map((row) => {
+                  const rowId = Number(row.id);
+
+                  return (
+                  <tr key={rowId} className="border-b hover:bg-gray-50">
                     {columns.map((column) => (
                       <td key={column.key} className="p-3 text-sm">
                         {renderValue(row, column.key, column.badge)}
@@ -395,14 +401,15 @@ export default function CrudPage({
                       </button>
 
                       <button
-                        onClick={() => deleteRow(row.id)}
+                        onClick={() => deleteRow(rowId)}
                         className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
                       >
                         Delete
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}

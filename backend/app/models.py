@@ -314,6 +314,7 @@ class ProductionSchedule(Base):
     __tablename__ = "production_schedules"
 
     id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, default=1)
     order_id = Column(Integer, ForeignKey("production_orders.id"), nullable=True)
     work_center_id = Column(Integer, ForeignKey("work_centers.id"), nullable=True)
 
@@ -334,5 +335,6 @@ class ProductionSchedule(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    company = relationship("Company")
     order = relationship("ProductionOrder")
     work_center = relationship("WorkCenter")

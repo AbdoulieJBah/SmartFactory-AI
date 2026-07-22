@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import { api, getErrorMessage } from "../lib/api";
 import {
@@ -21,9 +21,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -54,14 +51,20 @@ interface ForecastingData {
   }[];
 }
 
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
+type ApiCollection = {
+  data?: unknown;
+  items?: unknown;
+  results?: unknown;
+};
 type ForecastWindow = "7 Days" | "30 Days" | "90 Days" | "12 Months";
 
-const safeArray = (value: any): AnyRecord[] => {
+const safeArray = (value: unknown): AnyRecord[] => {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.items)) return value.items;
-  if (Array.isArray(value?.results)) return value.results;
+  const collection = value && typeof value === "object" ? (value as ApiCollection) : {};
+  if (Array.isArray(collection.data)) return collection.data as AnyRecord[];
+  if (Array.isArray(collection.items)) return collection.items as AnyRecord[];
+  if (Array.isArray(collection.results)) return collection.results as AnyRecord[];
   return [];
 };
 
@@ -69,10 +72,14 @@ function getValue(
   obj: AnyRecord,
   keys: string[],
   fallback: string | number = "-"
-) {
+): string | number {
   for (const key of keys) {
-    if (obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "") {
-      return obj[key];
+    const value = obj?.[key];
+
+    if (value !== undefined && value !== null && value !== "") {
+      return typeof value === "number" || typeof value === "string"
+        ? value
+        : String(value);
     }
   }
 
@@ -184,7 +191,6 @@ export default function ForecastingPage() {
   const [products, setProducts] = useState<AnyRecord[]>([]);
   const [inventory, setInventory] = useState<AnyRecord[]>([]);
   const [orders, setOrders] = useState<AnyRecord[]>([]);
-  const [salesOrders, setSalesOrders] = useState<AnyRecord[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [window, setWindow] = useState<ForecastWindow>("30 Days");
@@ -199,13 +205,11 @@ export default function ForecastingPage() {
         productsRes,
         inventoryRes,
         productionOrdersRes,
-        salesOrdersRes,
       ] = await Promise.allSettled([
         api.get("/forecasting/"),
         api.get("/products/"),
         api.get("/inventory/"),
         api.get("/production-orders/"),
-        api.get("/sales-orders/"),
       ]);
 
       if (forecastingRes.status === "fulfilled") {
@@ -224,10 +228,6 @@ export default function ForecastingPage() {
         setOrders(safeArray(productionOrdersRes.value.data));
       }
 
-      if (salesOrdersRes.status === "fulfilled") {
-        setSalesOrders(safeArray(salesOrdersRes.value.data));
-      }
-
       if (forecastingRes.status === "rejected") {
         setError(getErrorMessage(forecastingRes.reason));
       }
@@ -244,13 +244,13 @@ export default function ForecastingPage() {
 
   const s = data?.summary;
 
-  const getProductName = (productId: string | number) => {
+  const getProductName = useCallback((productId: string | number) => {
     const product = products.find(
       (p) => String(getValue(p, ["id"], "")) === String(productId)
     );
 
     return String(getValue(product || {}, ["name", "product_name", "sku"], `Product ${productId}`));
-  };
+  }, [products]);
 
   const demandCoverage = useMemo(() => {
     if (!s || s.demand_forecast <= 0) return 0;
@@ -319,7 +319,7 @@ export default function ForecastingPage() {
       .filter((item) => item.risk !== "Low")
       .sort((a, b) => b.gap - a.gap)
       .slice(0, 6);
-  }, [inventory, products]);
+  }, [inventory, getProductName]);
 
   const productionPlan = useMemo(() => {
     return orders.slice(0, 6).map((order) => {
@@ -339,13 +339,11 @@ export default function ForecastingPage() {
         status: String(getValue(order, ["status"], "Planned")),
       };
     });
-  }, [orders, products]);
+  }, [orders, getProductName]);
 
   return (
     <div className="min-h-screen bg-[#f6f8fb]">
-      <div className="fixed left-0 top-0 z-40 h-screen w-72">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
       <main className="ml-72 min-h-screen p-6">
         <div className="mb-6 flex items-start justify-between">

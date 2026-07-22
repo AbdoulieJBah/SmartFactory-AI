@@ -16,7 +16,6 @@ import {
   Send,
   Sparkles,
   Timer,
-  TrendingUp,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -24,13 +23,19 @@ interface ChatMessage {
   content: string;
 }
 
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
+type ApiCollection = {
+  data?: unknown;
+  items?: unknown;
+  results?: unknown;
+};
 
-const safeArray = (value: any): AnyRecord[] => {
+const safeArray = (value: unknown): AnyRecord[] => {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.items)) return value.items;
-  if (Array.isArray(value?.results)) return value.results;
+  const collection = value && typeof value === "object" ? (value as ApiCollection) : {};
+  if (Array.isArray(collection.data)) return collection.data as AnyRecord[];
+  if (Array.isArray(collection.items)) return collection.items as AnyRecord[];
+  if (Array.isArray(collection.results)) return collection.results as AnyRecord[];
   return [];
 };
 
@@ -274,9 +279,7 @@ export default function AICopilotPage() {
 
   return (
     <div className="min-h-screen bg-[#f6f8fb]">
-      <div className="fixed left-0 top-0 z-40 h-screen w-72">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
       <main className="ml-72 min-h-screen p-6">
         <div className="mb-6 flex items-start justify-between">

@@ -39,7 +39,7 @@ export default function AlertsPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="ml-72 min-h-screen flex-1 p-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold flex items-center gap-3">
             <BellRing className="text-red-600" />

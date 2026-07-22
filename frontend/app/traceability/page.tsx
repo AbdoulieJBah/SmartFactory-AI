@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../../components/Sidebar";
 import { api, getErrorMessage } from "../lib/api";
 import {
@@ -12,22 +12,33 @@ import {
   Search,
   ShieldCheck,
   Truck,
+  type LucideIcon,
 } from "lucide-react";
 
-type AnyRecord = Record<string, any>;
+type AnyRecord = Record<string, unknown>;
+type ApiCollection = {
+  data?: unknown;
+  items?: unknown;
+  results?: unknown;
+};
 
-function safeArray(value: any): AnyRecord[] {
+function safeArray(value: unknown): AnyRecord[] {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.items)) return value.items;
-  if (Array.isArray(value?.results)) return value.results;
+  const collection = value && typeof value === "object" ? (value as ApiCollection) : {};
+  if (Array.isArray(collection.data)) return collection.data as AnyRecord[];
+  if (Array.isArray(collection.items)) return collection.items as AnyRecord[];
+  if (Array.isArray(collection.results)) return collection.results as AnyRecord[];
   return [];
 }
 
-function getValue(obj: AnyRecord, keys: string[], fallback: string | number = "-") {
+function getValue(obj: AnyRecord, keys: string[], fallback: string | number = "-"): string | number {
   for (const key of keys) {
-    if (obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "") {
-      return obj[key];
+    const value = obj?.[key];
+
+    if (value !== undefined && value !== null && value !== "") {
+      return typeof value === "number" || typeof value === "string"
+        ? value
+        : String(value);
     }
   }
   return fallback;
@@ -69,6 +80,14 @@ function KpiCard({
   );
 }
 
+const traceabilityFlow: [string, LucideIcon][] = [
+  ["Supplier", Truck],
+  ["Raw Batch", Boxes],
+  ["Production Batch", Factory],
+  ["Finished Product", PackageCheck],
+  ["Customer / Recall", ShieldCheck],
+];
+
 export default function TraceabilityPage() {
   const [batches, setBatches] = useState<AnyRecord[]>([]);
   const [products, setProducts] = useState<AnyRecord[]>([]);
@@ -104,15 +123,15 @@ export default function TraceabilityPage() {
     loadData();
   }, []);
 
-  const getProductName = (id: string | number) => {
+  const getProductName = useCallback((id: string | number) => {
     const product = products.find((p) => String(getValue(p, ["id"], "")) === String(id));
     return String(getValue(product || {}, ["name", "product_name", "sku"], `Product ${id}`));
-  };
+  }, [products]);
 
-  const getSupplierName = (id: string | number) => {
+  const getSupplierName = useCallback((id: string | number) => {
     const supplier = suppliers.find((s) => String(getValue(s, ["id"], "")) === String(id));
     return String(getValue(supplier || {}, ["name", "supplier_name"], id ? `Supplier ${id}` : "No supplier"));
-  };
+  }, [suppliers]);
 
   const filteredBatches = useMemo(() => {
     const q = query.toLowerCase();
@@ -131,7 +150,7 @@ export default function TraceabilityPage() {
         status.includes(q)
       );
     });
-  }, [batches, products, suppliers, query]);
+  }, [batches, getProductName, getSupplierName, query]);
 
   const activeCount = batches.filter(
     (b) => String(getValue(b, ["status"], "")).toLowerCase() === "active"
@@ -203,13 +222,7 @@ export default function TraceabilityPage() {
           </h2>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-            {[
-              ["Supplier", Truck],
-              ["Raw Batch", Boxes],
-              ["Production Batch", Factory],
-              ["Finished Product", PackageCheck],
-              ["Customer / Recall", ShieldCheck],
-            ].map(([label, Icon]: any, index) => (
+            {traceabilityFlow.map(([label, Icon], index) => (
               <div key={label} className="rounded-xl border bg-gray-50 p-4 text-center">
                 <Icon className="mx-auto mb-2 text-blue-700" size={24} />
                 <p className="font-semibold text-gray-950">{label}</p>

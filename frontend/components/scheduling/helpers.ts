@@ -1,23 +1,36 @@
-export function safeArray(value: any) {
+import { AnyRecord } from "./types";
+
+type ApiCollection = {
+  data?: unknown;
+  items?: unknown;
+  results?: unknown;
+};
+
+function asCollection(value: unknown): ApiCollection {
+  return value && typeof value === "object" ? (value as ApiCollection) : {};
+}
+
+export function safeArray(value: unknown): AnyRecord[] {
   if (Array.isArray(value)) return value;
-  if (Array.isArray(value?.data)) return value.data;
-  if (Array.isArray(value?.items)) return value.items;
-  if (Array.isArray(value?.results)) return value.results;
+  const collection = asCollection(value);
+  if (Array.isArray(collection.data)) return collection.data as AnyRecord[];
+  if (Array.isArray(collection.items)) return collection.items as AnyRecord[];
+  if (Array.isArray(collection.results)) return collection.results as AnyRecord[];
   return [];
 }
 
 export function getValue(
-  obj: Record<string, any>,
+  obj: AnyRecord,
   keys: string[],
   fallback: string | number = "-"
-) {
+): string | number {
   for (const key of keys) {
-    if (
-      obj?.[key] !== undefined &&
-      obj?.[key] !== null &&
-      obj?.[key] !== ""
-    ) {
-      return obj[key];
+    const value = obj?.[key];
+
+    if (value !== undefined && value !== null && value !== "") {
+      return typeof value === "number" || typeof value === "string"
+        ? value
+        : String(value);
     }
   }
 

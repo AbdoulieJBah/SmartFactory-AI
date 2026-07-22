@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   Download,
   FileSpreadsheet,
+  type LucideIcon,
 } from "lucide-react";
 
 interface ExecutiveReport {
@@ -38,7 +39,7 @@ function ReportCard({
   title: string;
   value: string | number;
   subtitle: string;
-  icon: any;
+  icon: LucideIcon;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -122,7 +123,7 @@ export default function ReportsPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-8 overflow-x-auto">
+      <main className="ml-72 min-h-screen flex-1 overflow-x-auto p-8">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-4xl font-bold flex items-center gap-3">

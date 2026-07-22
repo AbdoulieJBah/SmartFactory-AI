@@ -8,7 +8,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Inventory, ProductionOrder, ProductionSchedule, WorkCenter
+from dependencies import get_current_company, require_production_access, require_read_access
+from models import Company, Inventory, ProductionOrder, ProductionSchedule, WorkCenter
 
 router = APIRouter(prefix="/scheduling", tags=["Scheduling"])
 
@@ -47,10 +48,11 @@ def time_overlap(start_a: str, end_a: str, start_b: str, end_b: str) -> bool:
     return start_a < end_b and start_b < end_a
 
 
-def get_work_center_load(db: Session, work_center_id: int) -> float:
+def get_work_center_load(db: Session, work_center_id: int, company_id: int) -> float:
     schedules = (
         db.query(ProductionSchedule)
         .filter(
+            ProductionSchedule.company_id == company_id,
             ProductionSchedule.work_center_id == work_center_id,
             ProductionSchedule.status != "Completed",
             ProductionSchedule.status != "Cancelled",
@@ -67,6 +69,7 @@ def get_work_center_load(db: Session, work_center_id: int) -> float:
 def check_schedule_conflict(
     db: Session,
     payload: dict,
+    company_id: int,
     schedule_id: Optional[int] = None,
 ) -> bool:
     work_center_id = payload.get("work_center_id")
@@ -80,6 +83,7 @@ def check_schedule_conflict(
     schedule_date = normalize_date(schedule_date)
 
     query = db.query(ProductionSchedule).filter(
+        ProductionSchedule.company_id == company_id,
         ProductionSchedule.work_center_id == work_center_id,
         ProductionSchedule.schedule_date == schedule_date,
         ProductionSchedule.status != "Completed",
@@ -98,18 +102,25 @@ def check_schedule_conflict(
     return False
 
 
-def check_material_status(db: Session, order_id: Optional[int]) -> str:
+def check_material_status(db: Session, order_id: Optional[int], company_id: int) -> str:
     if not order_id:
         return "Unchecked"
 
-    order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
+    order = (
+        db.query(ProductionOrder)
+        .filter(ProductionOrder.id == order_id, ProductionOrder.company_id == company_id)
+        .first()
+    )
 
     if not order:
         return "Order Not Found"
 
     inventory = (
         db.query(Inventory)
-        .filter(Inventory.product_id == order.product_id)
+        .filter(
+            Inventory.product_id == order.product_id,
+            Inventory.company_id == company_id,
+        )
         .first()
     )
 
@@ -140,6 +151,7 @@ def best_available_work_center(
     schedule_date: date,
     start_time: str,
     end_time: str,
+    company_id: int,
 ) -> Optional[WorkCenter]:
     candidates = []
 
@@ -151,8 +163,8 @@ def best_available_work_center(
             "end_time": end_time,
         }
 
-        has_conflict = check_schedule_conflict(db, payload)
-        load = get_work_center_load(db, wc.id)
+        has_conflict = check_schedule_conflict(db, payload, company_id)
+        load = get_work_center_load(db, wc.id, company_id)
 
         if not has_conflict:
             candidates.append((wc, load))
@@ -171,8 +183,10 @@ def get_schedules(
     status: Optional[str] = None,
     work_center_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
 ):
-    query = db.query(ProductionSchedule)
+    query = db.query(ProductionSchedule).filter(ProductionSchedule.company_id == company.id)
 
     if start_date:
         query = query.filter(ProductionSchedule.schedule_date >= start_date)
@@ -196,14 +210,46 @@ def get_schedules(
 
 
 @router.post("/")
-def create_schedule(payload: dict, db: Session = Depends(get_db)):
+def create_schedule(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
+):
     if payload.get("status") and payload["status"] not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid schedule status")
 
     payload["schedule_date"] = normalize_date(payload.get("schedule_date"))
+    payload["company_id"] = company.id
 
-    has_conflict = check_schedule_conflict(db, payload)
-    material_status = check_material_status(db, payload.get("order_id"))
+    if payload.get("order_id"):
+        order = (
+            db.query(ProductionOrder)
+            .filter(
+                ProductionOrder.id == payload["order_id"],
+                ProductionOrder.company_id == company.id,
+            )
+            .first()
+        )
+
+        if not order:
+            raise HTTPException(status_code=404, detail="Production order not found")
+
+    if payload.get("work_center_id"):
+        work_center = (
+            db.query(WorkCenter)
+            .filter(
+                WorkCenter.id == payload["work_center_id"],
+                WorkCenter.company_id == company.id,
+            )
+            .first()
+        )
+
+        if not work_center:
+            raise HTTPException(status_code=404, detail="Work center not found")
+
+    has_conflict = check_schedule_conflict(db, payload, company.id)
+    material_status = check_material_status(db, payload.get("order_id"), company.id)
 
     schedule = ProductionSchedule(
         **payload,
@@ -220,9 +266,17 @@ def create_schedule(payload: dict, db: Session = Depends(get_db)):
 
 
 @router.get("/capacity")
-def get_capacity(db: Session = Depends(get_db)):
-    work_centers = db.query(WorkCenter).all()
-    schedules = db.query(ProductionSchedule).all()
+def get_capacity(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
+):
+    work_centers = db.query(WorkCenter).filter(WorkCenter.company_id == company.id).all()
+    schedules = (
+        db.query(ProductionSchedule)
+        .filter(ProductionSchedule.company_id == company.id)
+        .all()
+    )
 
     result = []
 
@@ -261,9 +315,14 @@ def get_capacity(db: Session = Depends(get_db)):
 
 
 @router.get("/gantt")
-def get_gantt_data(db: Session = Depends(get_db)):
+def get_gantt_data(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
+):
     schedules = (
         db.query(ProductionSchedule)
+        .filter(ProductionSchedule.company_id == company.id)
         .order_by(
             ProductionSchedule.schedule_date.asc(),
             ProductionSchedule.start_time.asc(),
@@ -276,7 +335,10 @@ def get_gantt_data(db: Session = Depends(get_db)):
     for item in schedules:
         order = (
             db.query(ProductionOrder)
-            .filter(ProductionOrder.id == item.order_id)
+            .filter(
+                ProductionOrder.id == item.order_id,
+                ProductionOrder.company_id == company.id,
+            )
             .first()
             if item.order_id
             else None
@@ -284,7 +346,10 @@ def get_gantt_data(db: Session = Depends(get_db)):
 
         work_center = (
             db.query(WorkCenter)
-            .filter(WorkCenter.id == item.work_center_id)
+            .filter(
+                WorkCenter.id == item.work_center_id,
+                WorkCenter.company_id == company.id,
+            )
             .first()
             if item.work_center_id
             else None
@@ -316,9 +381,14 @@ def get_gantt_data(db: Session = Depends(get_db)):
 
 
 @router.post("/auto-generate")
-def auto_generate_schedule(db: Session = Depends(get_db)):
+def auto_generate_schedule(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
+):
     open_orders = (
         db.query(ProductionOrder)
+        .filter(ProductionOrder.company_id == company.id)
         .filter(ProductionOrder.status != "Completed")
         .filter(ProductionOrder.status != "Cancelled")
         .all()
@@ -326,6 +396,7 @@ def auto_generate_schedule(db: Session = Depends(get_db)):
 
     work_centers = (
         db.query(WorkCenter)
+        .filter(WorkCenter.company_id == company.id)
         .filter(WorkCenter.status == "Running")
         .all()
     )
@@ -338,7 +409,9 @@ def auto_generate_schedule(db: Session = Depends(get_db)):
 
     existing_order_ids = {
         s.order_id
-        for s in db.query(ProductionSchedule).all()
+        for s in db.query(ProductionSchedule)
+        .filter(ProductionSchedule.company_id == company.id)
+        .all()
         if s.order_id is not None
     }
 
@@ -382,15 +455,17 @@ def auto_generate_schedule(db: Session = Depends(get_db)):
                     schedule_date=schedule_day,
                     start_time=start_time,
                     end_time=end_time,
+                    company_id=company.id,
                 )
 
                 if not work_center:
                     continue
 
                 capacity_load = calculate_capacity_load(order)
-                material_status = check_material_status(db, order.id)
+                material_status = check_material_status(db, order.id, company.id)
 
                 schedule = ProductionSchedule(
+                    company_id=company.id,
                     order_id=order.id,
                     work_center_id=work_center.id,
                     schedule_date=schedule_day,
@@ -428,9 +503,14 @@ def auto_generate_schedule(db: Session = Depends(get_db)):
 
 
 @router.post("/reallocate")
-def reallocate_machines(db: Session = Depends(get_db)):
+def reallocate_machines(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
+):
     schedules = (
         db.query(ProductionSchedule)
+        .filter(ProductionSchedule.company_id == company.id)
         .filter(ProductionSchedule.status != "Completed")
         .filter(ProductionSchedule.status != "Cancelled")
         .all()
@@ -438,6 +518,7 @@ def reallocate_machines(db: Session = Depends(get_db)):
 
     running_centers = (
         db.query(WorkCenter)
+        .filter(WorkCenter.company_id == company.id)
         .filter(WorkCenter.status == "Running")
         .all()
     )
@@ -453,7 +534,10 @@ def reallocate_machines(db: Session = Depends(get_db)):
     for schedule in schedules:
         current_wc = (
             db.query(WorkCenter)
-            .filter(WorkCenter.id == schedule.work_center_id)
+            .filter(
+                WorkCenter.id == schedule.work_center_id,
+                WorkCenter.company_id == company.id,
+            )
             .first()
             if schedule.work_center_id
             else None
@@ -470,6 +554,7 @@ def reallocate_machines(db: Session = Depends(get_db)):
                 schedule_date=schedule.schedule_date,
                 start_time=schedule.start_time,
                 end_time=schedule.end_time,
+                company_id=company.id,
             )
 
             if not best_wc:
@@ -500,6 +585,8 @@ def update_workflow_status(
     schedule_id: int,
     payload: dict,
     db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
 ):
     new_status = payload.get("status")
 
@@ -508,7 +595,10 @@ def update_workflow_status(
 
     schedule = (
         db.query(ProductionSchedule)
-        .filter(ProductionSchedule.id == schedule_id)
+        .filter(
+            ProductionSchedule.id == schedule_id,
+            ProductionSchedule.company_id == company.id,
+        )
         .first()
     )
 
@@ -518,7 +608,7 @@ def update_workflow_status(
     schedule.status = new_status
 
     if new_status == "Released":
-        schedule.material_status = check_material_status(db, schedule.order_id)
+        schedule.material_status = check_material_status(db, schedule.order_id, company.id)
 
         if schedule.material_status in ["Insufficient", "No Inventory"]:
             schedule.conflict_status = "Conflict"
@@ -534,10 +624,15 @@ def reassign_schedule(
     schedule_id: int,
     payload: dict,
     db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
 ):
     schedule = (
         db.query(ProductionSchedule)
-        .filter(ProductionSchedule.id == schedule_id)
+        .filter(
+            ProductionSchedule.id == schedule_id,
+            ProductionSchedule.company_id == company.id,
+        )
         .first()
     )
 
@@ -545,6 +640,18 @@ def reassign_schedule(
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     if "work_center_id" in payload:
+        work_center = (
+            db.query(WorkCenter)
+            .filter(
+                WorkCenter.id == payload["work_center_id"],
+                WorkCenter.company_id == company.id,
+            )
+            .first()
+        )
+
+        if not work_center:
+            raise HTTPException(status_code=404, detail="Work center not found")
+
         schedule.work_center_id = payload["work_center_id"]
 
     if "schedule_date" in payload:
@@ -568,11 +675,11 @@ def reassign_schedule(
 
     schedule.conflict_status = (
         "Conflict"
-        if check_schedule_conflict(db, conflict_payload, schedule_id=schedule.id)
+        if check_schedule_conflict(db, conflict_payload, company.id, schedule_id=schedule.id)
         else "Clear"
     )
 
-    schedule.material_status = check_material_status(db, schedule.order_id)
+    schedule.material_status = check_material_status(db, schedule.order_id, company.id)
     schedule.schedule_type = "Manual Reassign"
 
     db.commit()
@@ -582,15 +689,27 @@ def reassign_schedule(
 
 
 @router.get("/material-check/{order_id}")
-def material_check(order_id: int, db: Session = Depends(get_db)):
-    order = db.query(ProductionOrder).filter(ProductionOrder.id == order_id).first()
+def material_check(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
+):
+    order = (
+        db.query(ProductionOrder)
+        .filter(ProductionOrder.id == order_id, ProductionOrder.company_id == company.id)
+        .first()
+    )
 
     if not order:
         raise HTTPException(status_code=404, detail="Production order not found")
 
     inventory = (
         db.query(Inventory)
-        .filter(Inventory.product_id == order.product_id)
+        .filter(
+            Inventory.product_id == order.product_id,
+            Inventory.company_id == company.id,
+        )
         .first()
     )
 
@@ -616,9 +735,17 @@ def material_check(order_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/machine-availability")
-def machine_availability(db: Session = Depends(get_db)):
-    work_centers = db.query(WorkCenter).all()
-    schedules = db.query(ProductionSchedule).all()
+def machine_availability(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
+):
+    work_centers = db.query(WorkCenter).filter(WorkCenter.company_id == company.id).all()
+    schedules = (
+        db.query(ProductionSchedule)
+        .filter(ProductionSchedule.company_id == company.id)
+        .all()
+    )
 
     result = []
 
@@ -648,9 +775,14 @@ def machine_availability(db: Session = Depends(get_db)):
 
 
 @router.get("/export")
-def export_schedule(db: Session = Depends(get_db)):
+def export_schedule(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
+):
     schedules = (
         db.query(ProductionSchedule)
+        .filter(ProductionSchedule.company_id == company.id)
         .order_by(
             ProductionSchedule.schedule_date.asc(),
             ProductionSchedule.start_time.asc(),
@@ -714,10 +846,18 @@ def export_schedule(db: Session = Depends(get_db)):
 
 
 @router.get("/{schedule_id}")
-def get_schedule(schedule_id: int, db: Session = Depends(get_db)):
+def get_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_read_access),
+    company: Company = Depends(get_current_company),
+):
     schedule = (
         db.query(ProductionSchedule)
-        .filter(ProductionSchedule.id == schedule_id)
+        .filter(
+            ProductionSchedule.id == schedule_id,
+            ProductionSchedule.company_id == company.id,
+        )
         .first()
     )
 
@@ -728,10 +868,19 @@ def get_schedule(schedule_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{schedule_id}")
-def update_schedule(schedule_id: int, payload: dict, db: Session = Depends(get_db)):
+def update_schedule(
+    schedule_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
+):
     schedule = (
         db.query(ProductionSchedule)
-        .filter(ProductionSchedule.id == schedule_id)
+        .filter(
+            ProductionSchedule.id == schedule_id,
+            ProductionSchedule.company_id == company.id,
+        )
         .first()
     )
 
@@ -743,6 +892,35 @@ def update_schedule(schedule_id: int, payload: dict, db: Session = Depends(get_d
 
     if "schedule_date" in payload:
         payload["schedule_date"] = normalize_date(payload["schedule_date"])
+
+    if "company_id" in payload:
+        payload.pop("company_id")
+
+    if "order_id" in payload and payload["order_id"]:
+        order = (
+            db.query(ProductionOrder)
+            .filter(
+                ProductionOrder.id == payload["order_id"],
+                ProductionOrder.company_id == company.id,
+            )
+            .first()
+        )
+
+        if not order:
+            raise HTTPException(status_code=404, detail="Production order not found")
+
+    if "work_center_id" in payload and payload["work_center_id"]:
+        work_center = (
+            db.query(WorkCenter)
+            .filter(
+                WorkCenter.id == payload["work_center_id"],
+                WorkCenter.company_id == company.id,
+            )
+            .first()
+        )
+
+        if not work_center:
+            raise HTTPException(status_code=404, detail="Work center not found")
 
     for key, value in payload.items():
         setattr(schedule, key, value)
@@ -756,11 +934,11 @@ def update_schedule(schedule_id: int, payload: dict, db: Session = Depends(get_d
 
     schedule.conflict_status = (
         "Conflict"
-        if check_schedule_conflict(db, conflict_payload, schedule_id=schedule.id)
+        if check_schedule_conflict(db, conflict_payload, company.id, schedule_id=schedule.id)
         else "Clear"
     )
 
-    schedule.material_status = check_material_status(db, schedule.order_id)
+    schedule.material_status = check_material_status(db, schedule.order_id, company.id)
 
     db.commit()
     db.refresh(schedule)
@@ -769,10 +947,18 @@ def update_schedule(schedule_id: int, payload: dict, db: Session = Depends(get_d
 
 
 @router.delete("/{schedule_id}")
-def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
+def delete_schedule(
+    schedule_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_production_access),
+    company: Company = Depends(get_current_company),
+):
     schedule = (
         db.query(ProductionSchedule)
-        .filter(ProductionSchedule.id == schedule_id)
+        .filter(
+            ProductionSchedule.id == schedule_id,
+            ProductionSchedule.company_id == company.id,
+        )
         .first()
     )
 

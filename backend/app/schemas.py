@@ -310,6 +310,7 @@ class ProductionScheduleUpdate(BaseModel):
 
 class ProductionScheduleResponse(ProductionScheduleBase):
     id: int
+    company_id: int
     created_at: datetime
 
     class Config:

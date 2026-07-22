@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
     <div className="flex min-h-screen bg-gray-100">
       <Sidebar />
 
-      <main className="flex-1 p-8">
+      <main className="ml-72 min-h-screen flex-1 p-8">
         <h1 className="text-3xl font-bold mb-2">Analytics</h1>
         <p className="text-gray-500 mb-8">
           Production, waste, inventory, and efficiency insights

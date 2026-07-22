@@ -1,4 +1,4 @@
-export type AnyRecord = Record<string, any>;
+export type AnyRecord = Record<string, unknown>;
 
 export interface ScheduleItem {
   id: number;
@@ -27,7 +27,21 @@ export interface CapacityItem {
   risk: string;
 }
 
-export const emptyScheduleForm = {
+export interface ScheduleFormState {
+  order_id: string;
+  work_center_id: string;
+  schedule_date: string;
+  shift: string;
+  start_time: string;
+  end_time: string;
+  priority: string;
+  status: string;
+  capacity_load: number;
+  assigned_operator: string;
+  notes: string;
+}
+
+export const emptyScheduleForm: ScheduleFormState = {
   order_id: "",
   work_center_id: "",
   schedule_date: "",

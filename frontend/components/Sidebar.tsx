@@ -13,6 +13,8 @@ import {
   CalendarDays,
   ClipboardCheck,
   Clock,
+  MonitorCog,
+  MonitorDot,
   Factory,
   FileClock,
   FileText,
@@ -29,6 +31,7 @@ import {
   Users,
   Warehouse,
   Wrench,
+  type LucideIcon,
 } from "lucide-react";
 import { logout } from "../app/lib/auth";
 import { api } from "../app/lib/api";
@@ -46,7 +49,7 @@ type Role =
 type NavLink = {
   name: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   roles: Role[];
 };
 
@@ -122,6 +125,8 @@ const navSections: NavSection[] = [
     title: "Manufacturing MES",
     links: [
       { name: "OEE Dashboard", href: "/oee", icon: Gauge, roles: allRoles },
+      { name: "Production Manager", href: "/production-manager", icon: MonitorCog, roles: productionRoles },
+      { name: "Operator Terminal", href: "/operator-terminal", icon: MonitorDot, roles: productionRoles },
       { name: "Scheduling", href: "/scheduling", icon: CalendarDays, roles: productionRoles },
       { name: "Production Orders", href: "/production-orders", icon: Factory, roles: productionRoles },
       { name: "Work Centers", href: "/work-centers", icon: Wrench, roles: productionRoles },
