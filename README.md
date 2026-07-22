@@ -34,7 +34,7 @@ REST API with JWT-based authentication. Docker Compose for local development.
 ## Tech stack
 
 **Frontend:** Next.js, React, TypeScript
-**Backend:** FastAPI, Python, SQLAlchemy
+**Backend:** FastAPI, Python, SQLAlchemy, Alembic
 **Database:** PostgreSQL
 **AI / ML:** rule-based demand forecasting, Gemini API (copilot)
 **Infrastructure:** Docker, Vercel, Render, Neon
@@ -50,12 +50,35 @@ docker compose up
 
 Frontend at http://localhost:3000 - API at http://localhost:8000
 
+## Database migrations
+
+Schema changes are managed with Alembic (`backend/migrations/`).
+
+- **Fresh/empty database:** `cd backend && alembic upgrade head`
+- **Existing database created before Alembic was introduced** (e.g. a dev
+  DB or the Neon prod DB, which already has all tables from the old
+  `Base.metadata.create_all()` boot step): run `cd backend && alembic stamp head`
+  instead - this records the baseline revision as already applied without
+  re-running the `CREATE TABLE` statements.
+- **New schema change going forward:** update `backend/app/models.py`, then
+  `alembic revision --autogenerate -m "..."` and `alembic upgrade head`.
+
+## Tests & CI
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+GitHub Actions runs the backend test suite and a frontend lint/build check
+on every push and pull request (`.github/workflows/`).
+
 ## Roadmap
 
 - Offline-first mode with sync-on-reconnect for low-connectivity environments
 - Mobile-money payment integration for the West African market
 - Pilot deployments with food manufacturers
-- Automated test coverage and CI
 
 ## Why this exists
 

@@ -5,21 +5,30 @@ import { api, getErrorMessage } from "../lib/api";
 import { saveAuth } from "../lib/auth";
 import { Factory } from "lucide-react";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("admin@smartfactory.ai");
-  const [password, setPassword] = useState("admin123");
+export default function RegisterPage() {
+  const [fullName, setFullName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const login = async () => {
-    if (!email || !password) {
-      setError("Email and password are required");
+  const register = async () => {
+    if (!fullName || !companyName || !email || !password) {
+      setError("All fields are required");
       return;
     }
 
     try {
       setLoading(true);
       setError("");
+
+      await api.post("/auth/register", {
+        full_name: fullName,
+        company_name: companyName,
+        email,
+        password,
+      });
 
       const response = await api.post("/auth/login-json", {
         email,
@@ -46,7 +55,7 @@ export default function LoginPage() {
 
           <div>
             <h1 className="text-2xl font-bold">SmartFactory AI</h1>
-            <p className="text-sm text-gray-500">MES & ERP Login</p>
+            <p className="text-sm text-gray-500">Create your company account</p>
           </div>
         </div>
 
@@ -58,12 +67,32 @@ export default function LoginPage() {
 
         <div className="space-y-4">
           <div>
+            <label className="text-sm text-gray-600">Your name</label>
+            <input
+              className="w-full border rounded-lg p-3 mt-1"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Jane Doe"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-600">Company name</label>
+            <input
+              className="w-full border rounded-lg p-3 mt-1"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Jane Foods Ltd"
+            />
+          </div>
+
+          <div>
             <label className="text-sm text-gray-600">Email</label>
             <input
               className="w-full border rounded-lg p-3 mt-1"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@smartfactory.ai"
+              placeholder="jane@example.com"
             />
           </div>
 
@@ -76,23 +105,23 @@ export default function LoginPage() {
               placeholder="Password"
               type="password"
               onKeyDown={(e) => {
-                if (e.key === "Enter") login();
+                if (e.key === "Enter") register();
               }}
             />
           </div>
 
           <button
-            onClick={login}
+            onClick={register}
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white p-3 rounded-lg font-semibold"
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Creating account..." : "Create account"}
           </button>
 
           <p className="text-sm text-gray-500 text-center">
-            Don&apos;t have an account?{" "}
-            <a href="/register" className="text-blue-600 hover:underline">
-              Create one
+            Already have an account?{" "}
+            <a href="/login" className="text-blue-600 hover:underline">
+              Sign in
             </a>
           </p>
         </div>

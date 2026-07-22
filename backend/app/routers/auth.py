@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Company, User, UserCompany
 from auth import hash_password, verify_password, create_access_token
+from rate_limit import limiter
 
 
 router = APIRouter(
@@ -27,12 +28,14 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/register")
+@limiter.limit("5/minute")
 def register_user(
-    request: RegisterRequest,
+    request: Request,
+    payload: RegisterRequest,
     db: Session = Depends(get_db)
 ):
     existing_user = db.query(User).filter(
-        User.email == request.email
+        User.email == payload.email
     ).first()
 
     if existing_user:
@@ -42,7 +45,7 @@ def register_user(
         )
 
     existing_company = db.query(Company).filter(
-        Company.name == request.company_name
+        Company.name == payload.company_name
     ).first()
 
     if existing_company:
@@ -52,16 +55,16 @@ def register_user(
         )
 
     new_user = User(
-        full_name=request.full_name,
-        email=request.email,
-        password_hash=hash_password(request.password),
+        full_name=payload.full_name,
+        email=payload.email,
+        password_hash=hash_password(payload.password),
         role="Company Admin"
     )
 
     db.add(new_user)
     db.flush()
 
-    new_company = Company(name=request.company_name)
+    new_company = Company(name=payload.company_name)
 
     db.add(new_company)
     db.flush()
@@ -92,7 +95,9 @@ def register_user(
 
 
 @router.post("/login")
+@limiter.limit("10/minute")
 def login_user(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
@@ -127,12 +132,14 @@ def login_user(
 
 
 @router.post("/login-json")
+@limiter.limit("10/minute")
 def login_user_json(
-    request: LoginRequest,
+    request: Request,
+    payload: LoginRequest,
     db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(
-        User.email == request.email
+        User.email == payload.email
     ).first()
 
     if not user:
@@ -141,7 +148,7 @@ def login_user_json(
             detail="Invalid email or password"
         )
 
-    if not verify_password(request.password, user.password_hash):
+    if not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"

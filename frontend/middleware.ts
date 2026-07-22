@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 const TOKEN_KEY = "smartfactory_token";
 
-const publicRoutes = ["/login"];
+const publicRoutes = ["/login", "/register"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

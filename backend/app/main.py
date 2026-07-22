@@ -6,10 +6,18 @@ sys.path.append(str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from database import engine
 from models import Base
+from rate_limit import limiter
 
+# Schema changes now go through Alembic (see backend/migrations/). This
+# create_all is kept only as a safety net so a brand-new, empty database
+# still boots without anyone having to run migrations by hand; it is a
+# no-op against a database whose tables already exist.
 Base.metadata.create_all(bind=engine)
 
 from routers import (
@@ -49,6 +57,10 @@ app = FastAPI(
     description="Commercial-grade AI-powered MES and ERP platform for manufacturing companies",
     version="1.0.0",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 DEFAULT_CORS_ORIGINS = [
     "http://localhost:3000",

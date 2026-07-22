@@ -1,0 +1,8 @@
+# Dev/test/tooling-only dependencies. Not installed in the production
+# Docker image (backend/Dockerfile only installs requirements.txt).
+-r requirements.txt
+
+pytest==9.1.1
+alembic==1.18.5
+Mako==1.3.12
+MarkupSafe==3.0.3

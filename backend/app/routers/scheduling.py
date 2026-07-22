@@ -267,12 +267,11 @@ def create_schedule(
     has_conflict = check_schedule_conflict(db, payload, company.id)
     material_status = check_material_status(db, payload.get("order_id"), company.id)
 
-    schedule = ProductionSchedule(
-        **payload,
-        conflict_status="Conflict" if has_conflict else "Clear",
-        material_status=material_status,
-        schedule_type=payload.get("schedule_type", "Manual"),
-    )
+    payload["conflict_status"] = "Conflict" if has_conflict else "Clear"
+    payload["material_status"] = material_status
+    payload["schedule_type"] = payload.get("schedule_type") or "Manual"
+
+    schedule = ProductionSchedule(**payload)
 
     db.add(schedule)
     db.commit()
