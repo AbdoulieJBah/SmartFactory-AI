@@ -3,7 +3,7 @@
 **AI-powered MES & ERP for food manufacturing** - production tracking, inventory, quality, and planning in one system, built for small and mid-size manufacturers that still run on paper and spreadsheets.
 
 **Live demo:** https://smart-factory-ai-seven.vercel.app
-**Try it:** `demo@smartfactory.ai` / `Demo2026!`
+**Try it:** `admin@smartfactory.ai` / `admin123`
 **API:** https://smartfactory-ai-backend.onrender.com
 
 > Free-tier hosting: the backend sleeps when idle - the first request may take ~60 seconds to wake. Give it a minute, then refresh.
