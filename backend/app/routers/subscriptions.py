@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import require_company_admin
-from models import Company, SubscriptionPlan, User
+from models import Company, SubscriptionPlan, User, UserCompany
 
 router = APIRouter(
     prefix="/subscriptions",
@@ -29,6 +29,22 @@ def assign_plan(
         require_company_admin
     ),
 ):
+    if current_user.role != "Super Admin":
+        owns_company = (
+            db.query(UserCompany)
+            .filter(
+                UserCompany.user_id == current_user.id,
+                UserCompany.company_id == company_id,
+            )
+            .first()
+        )
+
+        if not owns_company:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only manage the subscription for your own company",
+            )
+
     company = db.query(
         Company
     ).filter(

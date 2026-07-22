@@ -93,8 +93,24 @@ def delete_company(
 def assign_user_to_company(
     assignment: UserCompanyCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["Super Admin"])),
+    current_user: User = Depends(require_roles(["Super Admin", "Company Admin"])),
 ):
+    if current_user.role != "Super Admin":
+        owns_company = (
+            db.query(UserCompany)
+            .filter(
+                UserCompany.user_id == current_user.id,
+                UserCompany.company_id == assignment.company_id,
+            )
+            .first()
+        )
+
+        if not owns_company:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only assign users to your own company",
+            )
+
     user = db.query(User).filter(User.id == assignment.user_id).first()
     company = db.query(Company).filter(Company.id == assignment.company_id).first()
 

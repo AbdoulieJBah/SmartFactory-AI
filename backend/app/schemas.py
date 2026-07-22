@@ -315,3 +315,15 @@ class ProductionScheduleResponse(ProductionScheduleBase):
 
     class Config:
         from_attributes = True
+
+
+class ScheduleWorkflowStatusUpdate(BaseModel):
+    status: str
+
+
+class ScheduleReassignRequest(BaseModel):
+    work_center_id: Optional[int] = None
+    schedule_date: Optional[date] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    assigned_operator: Optional[str] = None

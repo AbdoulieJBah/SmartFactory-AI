@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
+from models import Company, User, UserCompany
 from auth import hash_password, verify_password, create_access_token
 
 
@@ -18,6 +18,7 @@ class RegisterRequest(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+    company_name: str
 
 
 class LoginRequest(BaseModel):
@@ -40,16 +41,40 @@ def register_user(
             detail="Email already registered"
         )
 
+    existing_company = db.query(Company).filter(
+        Company.name == request.company_name
+    ).first()
+
+    if existing_company:
+        raise HTTPException(
+            status_code=400,
+            detail="Company name already taken"
+        )
+
     new_user = User(
         full_name=request.full_name,
         email=request.email,
         password_hash=hash_password(request.password),
-        role="Operator"
+        role="Company Admin"
     )
 
     db.add(new_user)
+    db.flush()
+
+    new_company = Company(name=request.company_name)
+
+    db.add(new_company)
+    db.flush()
+
+    db.add(UserCompany(
+        user_id=new_user.id,
+        company_id=new_company.id,
+        role="Company Admin"
+    ))
+
     db.commit()
     db.refresh(new_user)
+    db.refresh(new_company)
 
     return {
         "message": "User registered successfully",
@@ -58,6 +83,10 @@ def register_user(
             "full_name": new_user.full_name,
             "email": new_user.email,
             "role": new_user.role
+        },
+        "company": {
+            "id": new_company.id,
+            "name": new_company.name
         }
     }
 

@@ -15,6 +15,12 @@ from dependencies import (
     require_read_access,
 )
 from models import Company, Inventory, ProductionOrder, ProductionSchedule, WorkCenter
+from schemas import (
+    ProductionScheduleCreate,
+    ProductionScheduleUpdate,
+    ScheduleReassignRequest,
+    ScheduleWorkflowStatusUpdate,
+)
 
 router = APIRouter(
     prefix="/scheduling",
@@ -220,14 +226,15 @@ def get_schedules(
 
 @router.post("/")
 def create_schedule(
-    payload: dict,
+    request: ProductionScheduleCreate,
     db: Session = Depends(get_db),
     current_user=Depends(require_production_access),
     company: Company = Depends(get_current_company),
 ):
-    if payload.get("status") and payload["status"] not in VALID_STATUSES:
+    if request.status and request.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid schedule status")
 
+    payload = request.model_dump()
     payload["schedule_date"] = normalize_date(payload.get("schedule_date"))
     payload["company_id"] = company.id
 
@@ -592,12 +599,12 @@ def reallocate_machines(
 @router.post("/{schedule_id}/workflow")
 def update_workflow_status(
     schedule_id: int,
-    payload: dict,
+    request: ScheduleWorkflowStatusUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(require_production_access),
     company: Company = Depends(get_current_company),
 ):
-    new_status = payload.get("status")
+    new_status = request.status
 
     if new_status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid workflow status")
@@ -631,11 +638,13 @@ def update_workflow_status(
 @router.post("/{schedule_id}/reassign")
 def reassign_schedule(
     schedule_id: int,
-    payload: dict,
+    request: ScheduleReassignRequest,
     db: Session = Depends(get_db),
     current_user=Depends(require_production_access),
     company: Company = Depends(get_current_company),
 ):
+    payload = request.model_dump(exclude_unset=True)
+
     schedule = (
         db.query(ProductionSchedule)
         .filter(
@@ -879,7 +888,7 @@ def get_schedule(
 @router.put("/{schedule_id}")
 def update_schedule(
     schedule_id: int,
-    payload: dict,
+    request: ProductionScheduleUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(require_production_access),
     company: Company = Depends(get_current_company),
@@ -896,14 +905,13 @@ def update_schedule(
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
+    payload = request.model_dump(exclude_unset=True)
+
     if payload.get("status") and payload["status"] not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid schedule status")
 
     if "schedule_date" in payload:
         payload["schedule_date"] = normalize_date(payload["schedule_date"])
-
-    if "company_id" in payload:
-        payload.pop("company_id")
 
     if "order_id" in payload and payload["order_id"]:
         order = (

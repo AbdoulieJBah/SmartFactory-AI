@@ -36,7 +36,7 @@ REST API with JWT-based authentication. Docker Compose for local development.
 **Frontend:** Next.js, React, TypeScript
 **Backend:** FastAPI, Python, SQLAlchemy
 **Database:** PostgreSQL
-**AI / ML:** scikit-learn (forecasting), Gemini API (copilot)
+**AI / ML:** rule-based demand forecasting, Gemini API (copilot)
 **Infrastructure:** Docker, Vercel, Render, Neon
 
 ## Run locally

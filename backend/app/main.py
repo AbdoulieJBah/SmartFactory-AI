@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -49,16 +50,29 @@ app = FastAPI(
     version="1.0.0",
 )
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://smart-factory-ai-seven.vercel.app",
+    "https://smart-factory-ai-git-main-abdouliejbahs-projects.vercel.app",
+    "https://smart-factory-7esait8ce-abdouliejbahs-projects.vercel.app",
+    "https://smart-factory-ai-kappa.vercel.app",
+]
+
+_cors_env = os.getenv("CORS_ORIGINS", "")
+CORS_ORIGINS = (
+    [origin.strip() for origin in _cors_env.split(",") if origin.strip()]
+    if _cors_env
+    else DEFAULT_CORS_ORIGINS
+)
+
+# Vercel preview deployments get a new URL per branch/PR; allow any
+# *.vercel.app subdomain in addition to the explicit allowlist above so new
+# previews don't require a redeploy just to fix CORS.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://smart-factory-ai-seven.vercel.app",
-        "https://smart-factory-ai-git-main-abdouliejbahs-projects.vercel.app",
-        "https://smart-factory-7esait8ce-abdouliejbahs-projects.vercel.app",
-        "https://smart-factory-ai-kappa.vercel.app",
-    ],
+    allow_origins=CORS_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
