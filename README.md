@@ -4,9 +4,9 @@
 
 **Live demo:** https://smart-factory-ai-seven.vercel.app
 **Try it:** `admin@smartfactory.ai` / `admin123`
-**API:** https://smartfactory-ai-backend.onrender.com
+**API:** https://smartfactory-ai-production.up.railway.app
 
-> Free-tier hosting: the backend sleeps when idle - the first request may take ~60 seconds to wake. Give it a minute, then refresh.
+> Free-tier hosting: the backend sleeps when idle, so the first request after a quiet spell can take a few seconds while it wakes up.
 
 Designed, built, and maintained solo by [Abdoulie J Bah](https://www.linkedin.com/in/abdoulie-j-bah-b71263244).
 
