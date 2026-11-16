@@ -16,7 +16,10 @@ router = APIRouter(
 def get_audit_logs(
     db: Session = Depends(get_db),
     current_user: User = Depends(
-        require_roles(["Super Admin", "Plant Manager"])
+        require_roles(["Super Admin"])
     )
 ):
+    # AuditLog has no company_id; actor membership is not a safe proxy for
+    # event ownership (users may belong to multiple companies). Keep this
+    # global log restricted until events carry an explicit tenant scope.
     return db.query(AuditLog).order_by(AuditLog.id.desc()).all()
