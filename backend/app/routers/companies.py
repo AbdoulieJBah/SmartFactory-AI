@@ -34,7 +34,13 @@ def get_companies(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["Super Admin", "Plant Manager"])),
 ):
-    return db.query(Company).order_by(Company.id.desc()).all()
+    query = db.query(Company)
+    if current_user.role != "Super Admin":
+        company_ids = db.query(UserCompany.company_id).filter(
+            UserCompany.user_id == current_user.id
+        )
+        query = query.filter(Company.id.in_(company_ids))
+    return query.order_by(Company.id.desc()).all()
 
 
 @router.get("/{company_id}", response_model=CompanyResponse)
@@ -43,7 +49,13 @@ def get_company(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    company = db.query(Company).filter(Company.id == company_id).first()
+    query = db.query(Company).filter(Company.id == company_id)
+    if current_user.role != "Super Admin":
+        company_ids = db.query(UserCompany.company_id).filter(
+            UserCompany.user_id == current_user.id
+        )
+        query = query.filter(Company.id.in_(company_ids))
+    company = query.first()
 
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -146,4 +158,10 @@ def get_user_company_assignments(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["Super Admin", "Plant Manager"])),
 ):
-    return db.query(UserCompany).order_by(UserCompany.id.desc()).all()
+    query = db.query(UserCompany)
+    if current_user.role != "Super Admin":
+        company_ids = db.query(UserCompany.company_id).filter(
+            UserCompany.user_id == current_user.id
+        )
+        query = query.filter(UserCompany.company_id.in_(company_ids))
+    return query.order_by(UserCompany.id.desc()).all()

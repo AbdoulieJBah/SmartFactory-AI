@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User
+from models import User, UserCompany
 from schemas import UserResponse
 from dependencies import get_current_user, require_roles
 
@@ -24,7 +24,16 @@ def get_users(
         require_roles(["Super Admin", "Plant Manager"])
     )
 ):
-    return db.query(User).order_by(User.id.desc()).all()
+    query = db.query(User)
+    if current_user.role != "Super Admin":
+        company_ids = db.query(UserCompany.company_id).filter(
+            UserCompany.user_id == current_user.id
+        )
+        user_ids = db.query(UserCompany.user_id).filter(
+            UserCompany.company_id.in_(company_ids)
+        )
+        query = query.filter(User.id.in_(user_ids))
+    return query.order_by(User.id.desc()).all()
 
 
 @router.delete("/{user_id}")
