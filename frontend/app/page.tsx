@@ -26,6 +26,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -67,14 +68,6 @@ const formatCurrency = (value: number) =>
   }).format(value || 0);
 
 const formatPercent = (value: number) => `${Number(value || 0).toFixed(1)}%`;
-
-const renderPercentLabel = ({
-  name,
-  value,
-}: {
-  name?: string;
-  value?: number;
-}) => `${name}: ${Number(value || 0).toFixed(1)}%`;
 
 const safeArray = (value: unknown): AnyRecord[] => {
   if (Array.isArray(value)) return value;
@@ -430,11 +423,12 @@ export default function DashboardPage() {
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie isAnimationActive={false} data={qualityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={renderPercentLabel}>
+                      <Pie isAnimationActive={false} data={qualityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60}>
                         <Cell fill="#16a34a" />
                         <Cell fill="#dc2626" />
                       </Pie>
-                      <Tooltip />
+                      <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
