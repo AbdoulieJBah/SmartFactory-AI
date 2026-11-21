@@ -36,6 +36,8 @@ import path from 'node:path';
     await page.waitForLoadState('networkidle');
     // Let chart entrance animations finish before recording visual evidence.
     await page.waitForTimeout(1800);
+    assert.ok(await page.locator('.recharts-bar-rectangle path').count() >= 3, 'Dashboard must render data bars');
+    assert.ok(await page.locator('.recharts-pie-sector').count() >= 1, 'Dashboard must render quality sectors');
     await page.screenshot({ path: path.join(output, 'demo-dashboard.png'), fullPage: true });
     for (const route of ['products', 'inventory', 'production-orders', 'work-centers',
       'maintenance', 'quality', 'downtime', 'waste', 'suppliers', 'customers',

@@ -15,7 +15,6 @@ import {
   Recycle,
   RefreshCw,
   Activity,
-  Filter,
   Gauge,
 } from "lucide-react";
 import {
@@ -53,7 +52,6 @@ interface DashboardResponse {
   };
 }
 
-type DateFilter = "Today" | "Week" | "Month" | "All";
 type AnyRecord = Record<string, unknown>;
 type ApiCollection = {
   data?: unknown;
@@ -192,7 +190,7 @@ export default function DashboardPage() {
   const [waste, setWaste] = useState<AnyRecord[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<DateFilter>("Week");
+  const [oeeData, setOeeData] = useState<{ availability: number; performance: number; quality: number; oee: number } | null>(null);
 
   async function loadDashboard() {
     try {
@@ -207,6 +205,7 @@ export default function DashboardPage() {
         qualityRes,
         downtimeRes,
         wasteRes,
+        oeeRes,
       ] = await Promise.allSettled([
         api.get<DashboardResponse>("/dashboard/"),
         api.get("/products/"),
@@ -215,6 +214,7 @@ export default function DashboardPage() {
         api.get("/quality-checks/"),
         api.get("/downtime/"),
         api.get("/waste-records/"),
+        api.get("/oee/"),
       ]);
 
       if (dashboardRes.status === "fulfilled") setData(dashboardRes.value.data);
@@ -224,6 +224,7 @@ export default function DashboardPage() {
       if (qualityRes.status === "fulfilled") setQuality(safeArray(qualityRes.value.data));
       if (downtimeRes.status === "fulfilled") setDowntime(safeArray(downtimeRes.value.data));
       if (wasteRes.status === "fulfilled") setWaste(safeArray(wasteRes.value.data));
+      if (oeeRes.status === "fulfilled") setOeeData(oeeRes.value.data);
 
       if (dashboardRes.status === "rejected") {
         setError(getErrorMessage(dashboardRes.reason));
@@ -277,33 +278,20 @@ export default function DashboardPage() {
       .slice(0, 5);
   }, [inventory]);
 
-  const oee = useMemo(() => {
-    const availability = Math.max(0, 100 - Number(kpis?.downtime_hours || 0) * 2);
-    const performance = Number(kpis?.production_efficiency || 0);
-    const qualityScore = Number(kpis?.quality_pass_rate || 0);
-    const score = (availability * performance * qualityScore) / 10000;
-
-    return {
-      availability,
-      performance,
-      qualityScore,
-      score,
-    };
-  }, [kpis]);
+  const oee = {
+    availability: oeeData?.availability ?? 0,
+    performance: oeeData?.performance ?? 0,
+    qualityScore: oeeData?.quality ?? 0,
+    score: oeeData?.oee ?? 0,
+  };
 
   const productionData = useMemo(
     () => [
-      { name: "Target Qty", value: 1500 },
-      {
-        name: "Produced Qty",
-        value: Math.max(
-          0,
-          Math.round(((kpis?.production_efficiency || 0) / 100) * 1500)
-        ),
-      },
-      { name: "Waste Qty", value: Math.round((kpis?.waste_rate || 0) * 10) },
+      { name: "Target Qty", value: orders.reduce((sum, order) => sum + Number(order.target_quantity || 0), 0) },
+      { name: "Produced Qty", value: orders.reduce((sum, order) => sum + Number(order.produced_quantity || 0), 0) },
+      { name: "Waste Qty", value: waste.reduce((sum, record) => sum + Number(record.quantity || 0), 0) },
     ],
-    [kpis]
+    [orders, waste]
   );
 
   const qualityData = useMemo(
@@ -332,14 +320,7 @@ export default function DashboardPage() {
       }));
     }
 
-    return [
-      { day: "Mon", output: 780, target: 900 },
-      { day: "Tue", output: 920, target: 1000 },
-      { day: "Wed", output: 850, target: 950 },
-      { day: "Thu", output: 1100, target: 1200 },
-      { day: "Fri", output: 980, target: 1100 },
-      { day: "Sat", output: 1200, target: 1300 },
-    ];
+    return [];
   }, [orders]);
 
   const activityFeed = useMemo(() => {
@@ -384,20 +365,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm">
-              <Filter size={15} className="text-gray-500" />
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-                className="bg-transparent text-sm font-medium outline-none"
-              >
-                <option>Today</option>
-                <option>Week</option>
-                <option>Month</option>
-                <option>All</option>
-              </select>
-            </div>
-
+            <span className="text-sm text-gray-500">All company records</span>
             <button
               onClick={loadDashboard}
               className="flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
@@ -428,7 +396,7 @@ export default function DashboardPage() {
               <KpiCard title="Products" value={kpis.total_products} subtitle="Active product catalog" icon={<Package size={19} />} tone="blue" href="/products" />
               <KpiCard title="Inventory Value" value={formatCurrency(kpis.inventory_value)} subtitle="Estimated stock value" icon={<Wallet size={19} />} tone="purple" href="/inventory" />
               <KpiCard title="Open Orders" value={kpis.open_production_orders} subtitle="Production not completed" icon={<Factory size={19} />} tone="orange" href="/production-orders" />
-              <KpiCard title="OEE Score" value={formatPercent(oee.score)} subtitle="Availability x performance x quality" icon={<Gauge size={19} />} tone={oee.score >= 85 ? "green" : "orange"} href="/oee" />
+              <KpiCard title="Illustrative OEE" value={formatPercent(oee.score)} subtitle="Demo model: assumes 480 planned minutes" icon={<Gauge size={19} />} tone={oee.score >= 85 ? "green" : "orange"} href="/oee" />
 
               <KpiCard title="Efficiency" value={formatPercent(kpis.production_efficiency)} subtitle="Produced vs target quantity" icon={<TrendingUp size={19} />} tone="green" href="/production-orders" />
               <KpiCard title="Quality Pass Rate" value={formatPercent(kpis.quality_pass_rate)} subtitle="Passed inspections" icon={<ClipboardCheck size={19} />} tone="green" href="/quality" />
@@ -452,7 +420,7 @@ export default function DashboardPage() {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="value" fill="#2563eb" radius={[8, 8, 0, 0]} />
+                      <Bar isAnimationActive={false} dataKey="value" fill="#2563eb" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -462,7 +430,7 @@ export default function DashboardPage() {
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={qualityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={renderPercentLabel}>
+                      <Pie isAnimationActive={false} data={qualityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={renderPercentLabel}>
                         <Cell fill="#16a34a" />
                         <Cell fill="#dc2626" />
                       </Pie>
@@ -480,7 +448,7 @@ export default function DashboardPage() {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="value" fill="#7c3aed" radius={[8, 8, 0, 0]} />
+                      <Bar isAnimationActive={false} dataKey="value" fill="#7c3aed" radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -488,7 +456,7 @@ export default function DashboardPage() {
             </section>
 
             <section className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <SectionCard title="Production Order Progress" subtitle={`Filtered view: ${dateFilter}`}>
+              <SectionCard title="Production Order Progress" subtitle="Latest six production orders">
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendData}>
@@ -496,8 +464,8 @@ export default function DashboardPage() {
                       <XAxis dataKey="day" />
                       <YAxis />
                       <Tooltip />
-                      <Area dataKey="target" type="monotone" stroke="#94a3b8" fill="#e2e8f0" strokeWidth={2} />
-                      <Area dataKey="output" type="monotone" stroke="#2563eb" fill="#bfdbfe" strokeWidth={3} />
+                      <Area isAnimationActive={false} dataKey="target" type="monotone" stroke="#94a3b8" fill="#e2e8f0" strokeWidth={2} />
+                      <Area isAnimationActive={false} dataKey="output" type="monotone" stroke="#2563eb" fill="#bfdbfe" strokeWidth={3} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -515,7 +483,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
                     <p className="text-sm font-semibold text-blue-700">OEE Monitoring</p>
-                    <p className="text-sm text-blue-600">Current OEE score is {formatPercent(oee.score)}.</p>
+                    <p className="text-sm text-blue-600">Illustrative OEE score is {formatPercent(oee.score)}.</p>
                   </div>
                 </div>
               </SectionCard>
