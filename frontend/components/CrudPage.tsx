@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../app/lib/api";
+import { useAuth } from "../app/context/AuthContext";
 import Sidebar from "./Sidebar";
 
 type FieldType = "text" | "number" | "select";
@@ -40,6 +41,8 @@ export default function CrudPage({
   fields,
   columns,
 }: CrudPageProps) {
+  const { user, loading: authLoading } = useAuth();
+  const canWrite = !authLoading && !!user && user.role !== "Viewer";
   const initialForm = useMemo(() => {
     return fields.reduce<Record<string, string>>((acc, field) => {
       acc[field.name] = field.defaultValue ?? "";
@@ -122,7 +125,7 @@ export default function CrudPage({
   };
 
   const saveRow = async () => {
-    if (!validateForm()) return;
+    if (!canWrite || !validateForm()) return;
 
     try {
       setSaving(true);
@@ -161,6 +164,7 @@ export default function CrudPage({
   };
 
   const deleteRow = async (id: number) => {
+    if (!canWrite) return;
     if (!confirm("Are you sure you want to delete this record?")) return;
 
     try {
@@ -262,7 +266,7 @@ export default function CrudPage({
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        {canWrite && <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">
             {editingId ? "Edit Record" : "Create New Record"}
           </h2>
@@ -354,7 +358,7 @@ export default function CrudPage({
               </button>
             )}
           </div>
-        </div>
+        </div>}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {loading ? (
@@ -374,9 +378,7 @@ export default function CrudPage({
                     </th>
                   ))}
 
-                  <th className="p-3 text-left text-sm font-semibold text-gray-600">
-                    Actions
-                  </th>
+                  {canWrite && <th className="p-3 text-left text-sm font-semibold text-gray-600">Actions</th>}
                 </tr>
               </thead>
 
@@ -392,7 +394,7 @@ export default function CrudPage({
                       </td>
                     ))}
 
-                    <td className="p-3 flex gap-2">
+                    {canWrite && <td className="p-3 flex gap-2">
                       <button
                         onClick={() => editRow(row)}
                         className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded text-sm"
@@ -406,7 +408,7 @@ export default function CrudPage({
                       >
                         Delete
                       </button>
-                    </td>
+                    </td>}
                   </tr>
                   );
                 })}

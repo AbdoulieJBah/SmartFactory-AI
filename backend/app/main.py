@@ -4,13 +4,15 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from database import engine
+from database import engine, get_db
 from models import Base
 from rate_limit import limiter
 
@@ -78,13 +80,10 @@ CORS_ORIGINS = (
     else DEFAULT_CORS_ORIGINS
 )
 
-# Vercel preview deployments get a new URL per branch/PR; allow any
-# *.vercel.app subdomain in addition to the explicit allowlist above so new
-# previews don't require a redeploy just to fix CORS.
+# Preview deployments must be explicitly allowlisted like production origins.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -160,3 +159,11 @@ def root():
             "Subscriptions",
         ],
     }
+
+@app.get("/health")
+def health(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    return {"status": "ok"}

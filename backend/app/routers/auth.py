@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
@@ -34,6 +35,9 @@ def register_user(
     payload: RegisterRequest,
     db: Session = Depends(get_db)
 ):
+    if os.getenv("ALLOW_REGISTRATION", "true").lower() != "true":
+        raise HTTPException(status_code=403, detail="Account registration is disabled")
+
     existing_user = db.query(User).filter(
         User.email == payload.email
     ).first()
