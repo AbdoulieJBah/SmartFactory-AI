@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Application source, not Python distribution output.
+!frontend/app/lib/
+!frontend/app/lib/*.ts

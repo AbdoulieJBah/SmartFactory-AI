@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { viewerRoutes } from "../app/lib/viewer-routes";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../app/context/AuthContext";
@@ -13,7 +15,7 @@ export default function ProtectedRoute({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { authenticated, loading } = useAuth();
+  const { authenticated, loading, user } = useAuth();
 
   const isPublicRoute = publicRoutes.includes(pathname);
 
@@ -39,5 +41,14 @@ export default function ProtectedRoute({
     return null;
   }
 
+  if (user?.role === "Viewer" && !isPublicRoute && !viewerRoutes.has(pathname)) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 p-8 text-white">
+        <h1 className="text-2xl font-bold">Read-only access</h1>
+        <p>This page requires a staff account. You can still explore the dashboard and reports.</p>
+        <Link className="rounded-lg bg-blue-600 px-5 py-3" href="/">Return to dashboard</Link>
+      </main>
+    );
+  }
   return <>{children}</>;
 }

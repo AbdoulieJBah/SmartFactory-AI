@@ -7,7 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Never honour a developer's production connection while importing main,
 # which creates tables at import time. Each test uses another in-memory DB.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-os.environ["SECRET_KEY"] = "test-secret-key"
+os.environ["ALLOW_REGISTRATION"] = "true"
+os.environ["SECRET_KEY"] = "isolated-test-secret-key-not-for-production-12345"
 
 import pytest
 from fastapi.testclient import TestClient

@@ -6,13 +6,15 @@ import { saveAuth } from "../lib/auth";
 import { Factory } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@smartfactory.ai");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const login = async () => {
-    if (!email || !password) {
+  const login = async (demo = false) => {
+    const loginEmail = demo ? process.env.NEXT_PUBLIC_DEMO_EMAIL : email;
+    const loginPassword = demo ? process.env.NEXT_PUBLIC_DEMO_PASSWORD : password;
+    if (!loginEmail || !loginPassword) {
       setError("Email and password are required");
       return;
     }
@@ -22,10 +24,13 @@ export default function LoginPage() {
       setError("");
 
       const response = await api.post("/auth/login-json", {
-        email,
-        password,
+        email: loginEmail,
+        password: loginPassword,
       });
 
+      if (demo && response.data.user.role !== "Viewer") {
+        throw new Error("Demo access is unavailable. Please contact the portfolio owner.");
+      }
       saveAuth(response.data.access_token, response.data.user);
 
       window.location.href = "/";
@@ -63,7 +68,9 @@ export default function LoginPage() {
               className="w-full border rounded-lg p-3 mt-1"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@smartfactory.ai"
+              placeholder="you@example.com"
+              type="email"
+              autoComplete="username"
             />
           </div>
 
@@ -75,6 +82,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               type="password"
+              autoComplete="current-password"
               onKeyDown={(e) => {
                 if (e.key === "Enter") login();
               }}
@@ -82,18 +90,24 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={login}
+            onClick={() => login()}
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white p-3 rounded-lg font-semibold"
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
 
+          {process.env.NEXT_PUBLIC_DEMO_EMAIL && process.env.NEXT_PUBLIC_DEMO_PASSWORD && (
+            <button
+              onClick={() => login(true)}
+              disabled={loading}
+              className="w-full rounded-lg border border-blue-600 px-5 py-2 font-semibold text-blue-700 disabled:opacity-50"
+            >
+              Explore read-only demo
+            </button>
+          )}
           <p className="text-sm text-gray-500 text-center">
-            Don&apos;t have an account?{" "}
-            <a href="/register" className="text-blue-600 hover:underline">
-              Create one
-            </a>
+            Demo access uses synthetic data. Changes and AI requests are disabled.
           </p>
         </div>
       </div>

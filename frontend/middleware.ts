@@ -16,9 +16,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (token && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
+  // A cookie may contain an expired token. Let the client verify it with
+  // /users/me before redirecting away from login, avoiding a redirect loop.
 
   return NextResponse.next();
 }

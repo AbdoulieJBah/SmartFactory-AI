@@ -102,3 +102,49 @@ def test_foreign_product_cannot_be_changed_by_manager(client, tenants):
     assert client.delete(f'/products/{pb.id}', headers=h['manager']).status_code == 404
     db.refresh(pb)
     assert (pb.name, pb.sku) == original
+
+@pytest.mark.parametrize('target', ['other', 'root', 'viewer'])
+def test_company_admin_cannot_assign_existing_accounts(client, tenants, target):
+    db, a, b, users, h, pa, pb = tenants
+    before = [(m.user_id, m.company_id, m.role) for m in db.query(UserCompany).order_by(UserCompany.id)]
+    response = client.post('/companies/assign-user', headers=h['admin'], json={
+        'user_id': users[target].id, 'company_id': a.id, 'role': 'Super Admin',
+    })
+    assert response.status_code == 403
+    db.expire_all()
+    assert [(m.user_id, m.company_id, m.role) for m in db.query(UserCompany).order_by(UserCompany.id)] == before
+
+
+def test_super_admin_can_assign_user_to_company(client, tenants):
+    db, a, b, users, h, pa, pb = tenants
+    response = client.post('/companies/assign-user', headers=h['root'], json={
+        'user_id': users['viewer'].id, 'company_id': b.id, 'role': 'Viewer',
+    })
+    assert response.status_code == 200
+    assert response.json()['company_id'] == b.id
+    db.expire_all()
+    assert db.query(UserCompany).filter_by(user_id=users['viewer'].id, company_id=b.id).count() == 1
+    assert users['viewer'].role == 'Viewer'
+
+# Discover actual mounted routes, so newly added write endpoints join the check.
+WRITE_ROUTES = [
+    (method, route.path)
+    for route in main.app.routes
+    if hasattr(route, 'methods') and not route.path.startswith('/auth/')
+    for method in sorted(route.methods & {'POST', 'PUT', 'PATCH', 'DELETE'})
+]
+
+@pytest.mark.parametrize('method,path', WRITE_ROUTES)
+def test_viewer_denied_on_every_business_write_route(client, tenants, method, path):
+    import re
+    from models import Base
+    db, a, b, users, h, pa, pb = tenants
+    def snapshot():
+        return {table.name: [tuple(row) for row in db.execute(table.select())]
+                for table in Base.metadata.sorted_tables}
+    before = snapshot()
+    url = re.sub(r'\{[^}]+\}', '1', path)
+    response = client.request(method, url, headers=h['viewer'], json={})
+    assert response.status_code == 403, (method, path, response.text)
+    db.expire_all()
+    assert snapshot() == before

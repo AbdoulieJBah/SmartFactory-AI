@@ -1,5 +1,6 @@
 "use client";
 
+import { viewerRoutes } from "../app/lib/viewer-routes";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -174,7 +175,7 @@ export default function Sidebar() {
   const visibleSections = navSections
     .map((section) => ({
       ...section,
-      links: section.links.filter((link) => link.roles.includes(userRole)),
+      links: section.links.filter((link) => (userRole === "Viewer" ? viewerRoutes.has(link.href) : link.roles.includes(userRole))),
     }))
     .filter((section) => section.links.length > 0);
 
@@ -185,6 +186,11 @@ export default function Sidebar() {
         <p className="mt-1 text-xs text-slate-400">
           Intelligent MES & ERP Platform
         </p>
+        {userRole === "Viewer" && (
+          <p className="mt-3 rounded-lg bg-blue-950 p-3 text-xs text-blue-100">
+            Read-only access. You can explore reports and records; changes are disabled.
+          </p>
+        )}
       </div>
 
       <nav className="flex-1 space-y-7 overflow-y-auto p-5 pb-10">
